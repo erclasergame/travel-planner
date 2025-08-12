@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState } from 'react';
-import { Plus, MapPin, Clock, Users, Download, Sparkles, ArrowLeft, ChevronRight, Lightbulb, Edit3, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, MapPin, Clock, Users, Download, Sparkles, ArrowLeft, ChevronRight, Lightbulb, Edit3, Trash2, Settings } from 'lucide-react';
 
 const TravelPlanner = () => {
-  const [currentScreen, setCurrentScreen] = useState('initial'); // initial, choice, manual, result
+  const [currentScreen, setCurrentScreen] = useState('initial');
   const [tripData, setTripData] = useState({
     from: '',
     to: '',
@@ -14,8 +14,16 @@ const TravelPlanner = () => {
   });
   const [travelPlan, setTravelPlan] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('google/gemma-2-9b-it:free');
 
-  // Prompt suggerito dettagliato
+  // Carica modello selezionato dal localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('travel-planner-ai-model');
+    if (saved) {
+      setSelectedModel(saved);
+    }
+  }, []);
+
   const suggestedPrompt = `Vogliamo visitare i luoghi più iconici e caratteristici della città, con un mix equilibrato di cultura, gastronomia locale e vita quotidiana. Ci interessano:
 
 🏛️ CULTURA: Monumenti famosi, musei principali, quartieri storici
@@ -31,7 +39,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setTripData({...tripData, description: suggestedPrompt});
   };
 
-  // Struttura per il piano di viaggio
+  // Gestione piano di viaggio
   const addDay = () => {
     setTravelPlan([...travelPlan, {
       id: Date.now(),
@@ -133,6 +141,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     ));
   };
 
+  // Chiamate API con modello selezionato
   const generateAIPlan = async () => {
     setLoading(true);
     try {
@@ -143,7 +152,8 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
         },
         body: JSON.stringify({
           tripData,
-          action: 'generate'
+          action: 'generate',
+          selectedModel: selectedModel  // Passa il modello selezionato
         })
       });
 
@@ -152,6 +162,11 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       }
 
       const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
       const aiPlan = JSON.parse(data.content);
       
       const formattedPlan = aiPlan.map((day, index) => ({
@@ -174,10 +189,10 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       }));
       
       setTravelPlan(formattedPlan);
-      setCurrentScreen('manual'); // VA ALLA SCHERMATA EDITABILE!
+      setCurrentScreen('manual');
     } catch (error) {
       console.error('Errore nella generazione:', error);
-      alert('Errore nella generazione del piano. Riprova.');
+      alert(`Errore nella generazione del piano: ${error.message}`);
     }
     setLoading(false);
   };
@@ -193,7 +208,8 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
         body: JSON.stringify({
           tripData,
           travelPlan,
-          action: 'process'
+          action: 'process',
+          selectedModel: selectedModel
         })
       });
 
@@ -202,6 +218,11 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       }
 
       const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
       const processedPlan = JSON.parse(data.content);
       
       const formattedPlan = processedPlan.map((day, index) => ({
@@ -227,7 +248,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       setCurrentScreen('result');
     } catch (error) {
       console.error('Errore nell\'elaborazione:', error);
-      alert('Errore nell\'elaborazione del piano. Riprova.');
+      alert(`Errore nell'elaborazione del piano: ${error.message}`);
     }
     setLoading(false);
   };
@@ -243,7 +264,8 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
         body: JSON.stringify({
           tripData,
           travelPlan,
-          action: 'enhance'
+          action: 'enhance',
+          selectedModel: selectedModel
         })
       });
 
@@ -252,6 +274,11 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       }
 
       const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
       const enhancedPlan = JSON.parse(data.content);
       
       const formattedPlan = enhancedPlan.map((day, index) => ({
@@ -276,7 +303,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       setTravelPlan(formattedPlan);
     } catch (error) {
       console.error('Errore nel miglioramento:', error);
-      alert('Errore nel miglioramento del piano. Riprova.');
+      alert(`Errore nel miglioramento del piano: ${error.message}`);
     }
     setLoading(false);
   };
@@ -284,7 +311,8 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
   const downloadJSON = () => {
     const dataStr = JSON.stringify({
       tripInfo: tripData,
-      itinerary: travelPlan
+      itinerary: travelPlan,
+      aiModel: selectedModel
     }, null, 2);
     const dataBlob = new Blob([dataStr], {type: 'application/json'});
     const url = URL.createObjectURL(dataBlob);
@@ -300,8 +328,21 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
         <div className="max-w-lg mx-auto pt-16">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">Travel Planner</h1>
+            <div className="flex items-center justify-between mb-4">
+              <div></div>
+              <h1 className="text-4xl font-bold text-gray-800">Travel Planner</h1>
+              <a 
+                href="/settings"
+                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-white rounded-lg transition-colors"
+                title="Impostazioni AI"
+              >
+                <Settings className="h-5 w-5" />
+              </a>
+            </div>
             <p className="text-gray-600">Pianifica il tuo viaggio perfetto</p>
+            <div className="text-xs text-gray-500 mt-2">
+              AI: {selectedModel.split('/')[1]?.split('-')[0] || selectedModel}
+            </div>
           </div>
           
           <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6 animate-fade-in">
@@ -405,6 +446,9 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-800 mb-2">Come vuoi procedere?</h2>
             <p className="text-gray-600">Scegli il metodo che preferisci</p>
+            <div className="text-xs text-gray-500 mt-2">
+              Usando: {selectedModel}
+            </div>
           </div>
           
           <div className="grid md:grid-cols-2 gap-6">
@@ -441,6 +485,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
             <div className="bg-white rounded-xl p-8 text-center">
               <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
               <p className="text-gray-600">Generando il tuo itinerario personalizzato...</p>
+              <p className="text-xs text-gray-500 mt-2">Modello: {selectedModel}</p>
             </div>
           </div>
         )}
@@ -448,7 +493,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     );
   }
 
-  // Screen manuale/editabile (per entrambi i flussi!)
+  // Screen manuale/editabile (resto del codice uguale...)
   if (currentScreen === 'manual') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -464,7 +509,13 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
             <h2 className="text-3xl font-bold text-gray-800">
               {travelPlan.length > 0 ? 'Modifica il tuo itinerario' : 'Costruisci il tuo itinerario'}
             </h2>
-            <div></div>
+            <a 
+              href="/settings"
+              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-white rounded-lg transition-colors"
+              title="Impostazioni AI"
+            >
+              <Settings className="h-5 w-5" />
+            </a>
           </div>
           
           <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -614,6 +665,9 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                   <p className="text-sm text-gray-600">
                     L'AI completerà e ottimizzerà il tuo itinerario rispettando le tue scelte
                   </p>
+                  <p className="text-xs text-gray-500">
+                    Modello: {selectedModel}
+                  </p>
                 </>
               )}
             </div>
@@ -623,7 +677,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     );
   }
 
-  // Screen risultato finale
+  // Screen risultato finale (resto uguale con piccole aggiunte...)
   if (currentScreen === 'result') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -638,6 +692,13 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
             </button>
             <h2 className="text-3xl font-bold text-gray-800">Il tuo itinerario finale</h2>
             <div className="flex gap-3">
+              <a 
+                href="/settings"
+                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-white rounded-lg transition-colors"
+                title="Impostazioni AI"
+              >
+                <Settings className="h-5 w-5" />
+              </a>
               <button
                 onClick={() => setCurrentScreen('manual')}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center"
@@ -687,6 +748,9 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                   <span className="text-gray-600">Persone:</span>
                   <p className="font-semibold">{tripData.people}</p>
                 </div>
+              </div>
+              <div className="text-xs text-gray-500 mt-3">
+                Generato con: {selectedModel}
               </div>
             </div>
             

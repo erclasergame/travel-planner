@@ -3,65 +3,34 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { tripData, travelPlan, action } = body;
+    const { tripData, travelPlan, action, selectedModel } = body;
 
     let prompt = '';
     
     if (action === 'generate') {
-      prompt = `Sei un esperto travel planner con conoscenza dettagliata di luoghi, tempi e logistica. Crea un itinerario di viaggio REALISTICO e DETTAGLIATO per:
+      prompt = `Crea un itinerario di viaggio dettagliato per:
+- Da: ${tripData.from}
+- A: ${tripData.to}
+- Durata: ${tripData.duration}
+- Persone: ${tripData.people}
+- Descrizione: ${tripData.description}
 
-DESTINAZIONE: Da ${tripData.from} a ${tripData.to}
-DURATA: ${tripData.duration}
-PERSONE: ${tripData.people}
-TIPO VIAGGIO: ${tripData.description}
-
-ISTRUZIONI SPECIFICHE:
-1. RICERCA ATTIVITÀ REALI: Include nomi specifici di musei, ristoranti, attrazioni che esistono davvero
-2. TEMPI REALISTICI: Calcola tempi effettivi (30min museo, 1h ristorante, 15min a piedi tra luoghi vicini)
-3. LOGISTICA INTELLIGENTE: Raggruppa attività per zona geografica, considera distanze e trasporti
-4. ORARI PRATICI: Rispetta orari di apertura, evita sovrapposizioni impossibili
-5. ALTERNATIVE: Per ogni attività principale, suggerisci 1-2 alternative simili
-6. DETTAGLI UTILI: Includi costi approssimativi, consigli pratici, note speciali
-
-FORMATO JSON RICHIESTO:
+Rispondi SOLO con JSON valido in questo formato:
 [
   {
     "day": 1,
     "movements": [
       {
-        "from": "Stazione/Hotel specifico",
-        "to": "Zona/Quartiere specifico",
-        "transport": "metro/a piedi/taxi (tempo stimato)",
+        "from": "luogo partenza",
+        "to": "luogo arrivo",
+        "transport": "mezzo di trasporto (opzionale)",
         "activities": [
           {
-            "time": "09:00-10:30",
-            "description": "Colosseo - Visita con audioguida (€16, prenota online)",
-            "type": "cultura",
-            "duration": "1h 30min",
-            "cost": "€16",
-            "alternatives": ["Fori Romani", "Palatino"],
-            "notes": "Evita code: prenota skip-the-line",
-            "editable": true
-          },
-          {
-            "time": "11:00-12:00",
-            "description": "Passeggiata verso Fontana di Trevi (20min a piedi)",
-            "type": "spostamento",
-            "duration": "20min",
-            "cost": "gratis",
-            "alternatives": ["Metro linea B", "Taxi"],
-            "notes": "Strada panoramica consigliata",
-            "editable": true
-          },
-          {
-            "time": "12:30-14:00",
-            "description": "Pranzo da Armando al Pantheon - Cucina romana tradizionale (€35/persona)",
-            "type": "ristorazione",
-            "duration": "1h 30min",
-            "cost": "€35/persona",
-            "alternatives": ["Checchino dal 1887", "Da Enzo al 29"],
-            "notes": "Prenota: molto frequentato",
-            "editable": true
+            "description": "attività dettagliata",
+            "time": "09:00-11:00",
+            "cost": "€20 (opzionale)",
+            "alternatives": ["alt1", "alt2"],
+            "notes": "note utili (opzionale)"
           }
         ]
       }
@@ -69,90 +38,30 @@ FORMATO JSON RICHIESTO:
   }
 ]
 
-ESEMPI DI ATTIVITÀ SPECIFICHE PER TIPO:
-- CULTURA: Nome museo/monumento + orari + costo + tempo visita
-- RISTORAZIONE: Nome ristorante + tipo cucina + fascia prezzo + atmosfera  
-- SHOPPING: Via/zona + tipo negozi + budget + tempo necessario
-- NATURA: Parco/giardino + attività possibili + stagionalità
-- TRASPORTI: Mezzo specifico + tempo + costo + frequenza
-
-CREA ALMENO 6-8 ATTIVITÀ PER GIORNO con orari dalle 9:00 alle 22:00.
-INCLUDI: colazione, pranzo, cena, pause, spostamenti.
-SII SPECIFICO: nomi reali, indirizzi approssimativi, prezzi realistici.
-
-Rispondi SOLO con il JSON, niente altro testo.`;
+Crea un itinerario completo con attività specifiche, orari realistici e dettagli pratici. SOLO JSON.`;
     
     } else if (action === 'enhance') {
-      prompt = `Sei un travel planner esperto. MIGLIORA questo itinerario esistente aggiungendo dettagli specifici, informazioni pratiche e alternative reali:
+      prompt = `Arricchisci questo itinerario con dettagli specifici, ristoranti reali, costi stimati:
+${JSON.stringify(travelPlan)}
 
-ITINERARIO ATTUALE:
-${JSON.stringify(travelPlan, null, 2)}
+Contesto viaggio: ${tripData.from} → ${tripData.to}, ${tripData.duration}, ${tripData.people} persone.
 
-CONTESTO VIAGGIO:
-- Da: ${tripData.from}
-- A: ${tripData.to}  
-- Durata: ${tripData.duration}
-- Persone: ${tripData.people}
-- Tipo: ${tripData.description}
-
-MIGLIORAMENTI DA APPLICARE:
-1. SOSTITUISCI attività generiche con NOMI SPECIFICI reali
-2. AGGIUNGI informazioni pratiche: costi, orari apertura, come arrivare
-3. CALCOLA tempi realistici per ogni attività
-4. PROPONI 2-3 alternative per ogni attività principale
-5. INCLUDI consigli pratici e note utili
-6. OTTIMIZZA la logistica (distanze, trasporti)
-7. AGGIUNGI dettagli su prenotazioni, code, stagionalità
-
-REGOLE PER IL MIGLIORAMENTO:
-- MANTIENI la struttura giorni/movements esistente
-- RISPETTA le modifiche dell'utente se presenti
-- ARRICCHISCI ogni attività con dettagli pratici
-- AGGIUNGI alternative concrete e specifiche
-- CALCOLA costi totali realistici
-
-ESEMPIO DI MIGLIORAMENTO:
-DA: "Visita museo" 
-A: "Museo del Louvre - Capolavori essenziali (€17, 2h, prenota online), Alternative: Musée d'Orsay, Centre Pompidou"
-
-Rispondi con lo stesso formato JSON ma molto più dettagliato e specifico.`;
+Rispondi SOLO con JSON nello stesso formato ma molto più dettagliato.`;
     
     } else if (action === 'process') {
-      prompt = `Sei un travel planner esperto. ELABORA questo piano manuale dell'utente trasformandolo in un itinerario completo e professionale:
+      prompt = `Elabora questo piano manuale aggiungendo orari dettagliati, pasti se mancanti, e riempiendo spazi vuoti:
+${JSON.stringify(travelPlan)}
 
-PIANO UTENTE:
-${JSON.stringify(travelPlan, null, 2)}
+Contesto: ${tripData.from} → ${tripData.to}, ${tripData.duration}, ${tripData.people} persone.
 
-CONTESTO:
-- Viaggio: ${tripData.from} → ${tripData.to}
-- Durata: ${tripData.duration}
-- Persone: ${tripData.people}
-- Tipo: ${tripData.description}
-
-COMPITI:
-1. COMPLETA gli orari mancanti con tempi realistici
-2. AGGIUNGI pasti se non presenti (colazione, pranzo, cena)
-3. RIEMPI spazi vuoti con attività pertinenti o "tempo libero"
-4. TRASFORMA descrizioni generiche in attività specifiche
-5. AGGIUNGI informazioni pratiche (costi, durata, trasporti)
-6. PROPONI alternative per ogni attività
-7. OTTIMIZZA la sequenza logistica
-
-REGOLE FONDAMENTALI:
-- RISPETTA SEMPRE le scelte specifiche dell'utente
-- NON modificare attività già dettagliate dall'utente
-- MANTIENI l'ordine e la struttura voluta dall'utente
-- AGGIUNGI solo dove mancano informazioni
-- SUGGERISCI alternative senza sostituire le scelte utente
-
-ESEMPIO:
-Se l'utente ha scritto "Colosseo ore 10", mantieni "Colosseo" ma aggiungi: 
-"Colosseo - Visita con audioguida (€16, 1h30min, prenota skip-the-line)"
-
-Se ha uno spazio vuoto dalle 14:00-16:00, proponi attività coerenti con la zona e il tipo di viaggio.
-
-Restituisci il JSON nello stesso formato, ma arricchito e completato rispettando le scelte dell'utente.`;
+Mantieni le scelte dell'utente e completa solo quello che manca. Rispondi SOLO con JSON completo.`;
     }
+
+    // Usa il modello selezionato dall'utente o fallback
+    const modelToUse = selectedModel || process.env.AI_MODEL || 'google/gemma-2-9b-it:free';
+
+    console.log('Using AI model:', modelToUse);
+    console.log('Prompt length:', prompt.length);
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -163,15 +72,15 @@ Restituisci il JSON nello stesso formato, ma arricchito e completato rispettando
         'X-Title': 'Travel Planner'
       },
       body: JSON.stringify({
-        model: process.env.AI_MODEL || 'google/gemma-2-9b-it:free',
+        model: modelToUse,
         messages: [
           {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: 6000, // Aumentato per più dettagli
-        temperature: 0.8, // Più creatività per alternative
+        max_tokens: 4000,
+        temperature: 0.7,
         top_p: 0.9
       })
     });
@@ -184,16 +93,32 @@ Restituisci il JSON nello stesso formato, ma arricchito e completato rispettando
     const data = await response.json();
     let content = data.choices[0].message.content;
     
-    // Pulizia più robusta del JSON
+    console.log('Raw AI response:', content.substring(0, 200) + '...');
+    
+    // Pulizia del JSON
     content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     content = content.replace(/^[^[{]*/, "").replace(/[^}\]]*$/, "");
     
-    return NextResponse.json({ content });
+    // Verifica che sia JSON valido
+    try {
+      const parsed = JSON.parse(content);
+      console.log('JSON validation successful, items:', parsed.length);
+    } catch (parseError) {
+      console.error('JSON Parse Error:', parseError);
+      console.error('Content causing error:', content);
+      throw new Error(`Invalid JSON from AI model ${modelToUse}: ${parseError.message}`);
+    }
+    
+    return NextResponse.json({ 
+      content,
+      model: modelToUse,
+      usage: data.usage
+    });
 
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: `Errore nella generazione del piano: ${error.message}` },
+      { error: `Errore con modello AI: ${error.message}` },
       { status: 500 }
     );
   }
