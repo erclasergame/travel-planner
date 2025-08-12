@@ -1,120 +1,22 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Search, Settings, Zap, DollarSign, CheckCircle, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
+import { Search, Settings, Zap, DollarSign, CheckCircle, ArrowLeft, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 
 const SettingsPage = () => {
   const [selectedModel, setSelectedModel] = useState('google/gemma-2-9b-it:free');
   const [searchTerm, setSearchTerm] = useState('');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
+  const [aiModels, setAiModels] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  
-  // Lista modelli AI con info dettagliate
-  const aiModels = [
-    // GRATUITI
-    {
-      id: 'google/gemma-2-9b-it:free',
-      name: 'Gemma 2 9B',
-      provider: 'Google',
-      category: 'free',
-      cost: 'Gratuito',
-      speed: 'Veloce',
-      quality: 'Buona',
-      description: 'Modello gratuito per test e sviluppo'
-    },
-    {
-      id: 'microsoft/phi-3-mini-128k-instruct:free',
-      name: 'Phi-3 Mini',
-      provider: 'Microsoft',
-      category: 'free',
-      cost: 'Gratuito',
-      speed: 'Molto veloce',
-      quality: 'Buona',
-      description: 'Piccolo ma efficiente, ottimo per task semplici'
-    },
-    {
-      id: 'meta-llama/llama-3.1-8b-instruct:free',
-      name: 'Llama 3.1 8B',
-      provider: 'Meta',
-      category: 'free',
-      cost: 'Gratuito',
-      speed: 'Veloce',
-      quality: 'Ottima',
-      description: 'Modello open-source potente e gratuito'
-    },
-    
-    // ECONOMICI
-    {
-      id: 'deepseek/deepseek-chat',
-      name: 'DeepSeek Chat',
-      provider: 'DeepSeek',
-      category: 'cheap',
-      cost: '$0.14/1M',
-      speed: 'Veloce',
-      quality: 'Eccellente',
-      description: 'Ottimo rapporto qualità/prezzo per itinerari dettagliati'
-    },
-    {
-      id: 'google/gemini-flash-1.5',
-      name: 'Gemini Flash 1.5',
-      provider: 'Google',
-      category: 'cheap',
-      cost: '$0.35/1M',
-      speed: 'Molto veloce',
-      quality: 'Eccellente',
-      description: 'Velocissimo per task di planning e organizing'
-    },
-    {
-      id: 'anthropic/claude-3-haiku',
-      name: 'Claude 3 Haiku',
-      provider: 'Anthropic',
-      category: 'cheap',
-      cost: '$0.80/1M',
-      speed: 'Molto veloce',
-      quality: 'Eccellente',
-      description: 'Claude veloce ed economico, perfetto per itinerari'
-    },
-    
-    // PREMIUM
-    {
-      id: 'anthropic/claude-3.5-sonnet',
-      name: 'Claude 3.5 Sonnet',
-      provider: 'Anthropic',
-      category: 'premium',
-      cost: '$15/1M',
-      speed: 'Normale',
-      quality: 'Eccezionale',
-      description: 'Il migliore per itinerari creativi e dettagliati'
-    },
-    {
-      id: 'openai/gpt-4o',
-      name: 'GPT-4o',
-      provider: 'OpenAI',
-      category: 'premium',
-      cost: '$25/1M',
-      speed: 'Normale',
-      quality: 'Eccezionale',
-      description: 'Versatile e potente per ogni tipo di planning'
-    },
-    {
-      id: 'google/gemini-pro-1.5',
-      name: 'Gemini Pro 1.5',
-      provider: 'Google',
-      category: 'premium',
-      cost: '$7/1M',
-      speed: 'Veloce',
-      quality: 'Eccellente',
-      description: 'Grande context window per itinerari complessi'
-    }
-  ];
-
-  // Filtra modelli in base alla ricerca
-  const filteredModels = aiModels.filter(model => 
-    model.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    model.provider.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    model.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Carica modelli AI all'avvio
+  useEffect(() => {
+    loadModels();
+  }, []);
 
   // Carica settings salvati
   useEffect(() => {
@@ -123,6 +25,48 @@ const SettingsPage = () => {
       setSelectedModel(saved);
     }
   }, []);
+
+  const loadModels = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/models');
+      const data = await response.json();
+      
+      if (data.success) {
+        setAiModels(data.models);
+        setLastUpdated(new Date(data.lastUpdated));
+      } else {
+        // Usa i modelli di fallback
+        setAiModels(data.models);
+        setError('Lista limitata - errore connessione OpenRouter');
+      }
+    } catch (err) {
+      setError('Errore nel caricamento modelli');
+      // Fallback ai modelli base
+      setAiModels([
+        {
+          id: 'google/gemma-2-9b-it:free',
+          name: 'Gemma 2 9B',
+          provider: 'Google',
+          category: 'free',
+          cost: 'Gratuito',
+          description: 'Modello gratuito per test e sviluppo'
+        }
+      ]);
+    }
+    
+    setLoading(false);
+  };
+
+  // Filtra modelli in base alla ricerca
+  const filteredModels = aiModels.filter(model => 
+    model.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    model.provider.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    model.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    model.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Salva settings
   const saveSettings = () => {
@@ -149,7 +93,7 @@ const SettingsPage = () => {
 
       const data = await response.json();
       
-      if (response.ok) {
+      if (response.ok && data.success) {
         setTestResult({
           success: true,
           message: 'Modello funzionante!',
@@ -204,12 +148,45 @@ const SettingsPage = () => {
             Torna al Travel Planner
           </a>
           <h1 className="text-3xl font-bold text-gray-800">⚙️ Impostazioni AI</h1>
-          <div></div>
+          <button
+            onClick={loadModels}
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-sm"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Aggiorna
+          </button>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Lista Modelli */}
           <div className="lg:col-span-2 space-y-6">
+            
+            {/* Info aggiornamento */}
+            <div className="bg-white rounded-2xl shadow-xl p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                  ) : error ? (
+                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {loading ? 'Caricando modelli...' : 
+                     error ? error : 
+                     `${aiModels.length} modelli disponibili`}
+                  </span>
+                </div>
+                {lastUpdated && (
+                  <span className="text-xs text-gray-500">
+                    Aggiornato: {lastUpdated.toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+            </div>
+
             {/* Ricerca */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <div className="relative">
@@ -222,10 +199,23 @@ const SettingsPage = () => {
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
+              {searchTerm && (
+                <p className="text-sm text-gray-600 mt-2">
+                  {filteredModels.length} risultati per "{searchTerm}"
+                </p>
+              )}
             </div>
 
+            {/* Loading */}
+            {loading && (
+              <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+                <p className="text-gray-600">Caricando modelli da OpenRouter...</p>
+              </div>
+            )}
+
             {/* Sezioni per categoria */}
-            {['free', 'cheap', 'premium'].map(category => {
+            {!loading && ['free', 'cheap', 'premium'].map(category => {
               const categoryModels = filteredModels.filter(m => m.category === category);
               if (categoryModels.length === 0) return null;
 
@@ -237,8 +227,11 @@ const SettingsPage = () => {
 
               return (
                 <div key={category} className="bg-white rounded-2xl shadow-xl p-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-4">
+                  <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center justify-between">
                     {categoryTitles[category]}
+                    <span className="text-sm font-normal text-gray-500">
+                      {categoryModels.length} modelli
+                    </span>
                   </h3>
                   
                   <div className="space-y-3">
@@ -270,8 +263,10 @@ const SettingsPage = () => {
                             
                             <div className="flex gap-4 text-xs text-gray-500">
                               <span><strong>Provider:</strong> {model.provider}</span>
-                              <span><strong>Velocità:</strong> {model.speed}</span>
-                              <span><strong>Qualità:</strong> {model.quality}</span>
+                              <span><strong>ID:</strong> {model.id}</span>
+                              {model.contextLength && model.contextLength !== 'N/A' && (
+                                <span><strong>Context:</strong> {model.contextLength}</span>
+                              )}
                             </div>
                           </div>
                           
@@ -285,6 +280,14 @@ const SettingsPage = () => {
                 </div>
               );
             })}
+
+            {/* Nessun risultato */}
+            {!loading && filteredModels.length === 0 && (
+              <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+                <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">Nessun modello trovato per "{searchTerm}"</p>
+              </div>
+            )}
           </div>
 
           {/* Pannello Controlli */}
@@ -302,6 +305,7 @@ const SettingsPage = () => {
                     <div>
                       <div className="font-semibold text-gray-800">{selected.name}</div>
                       <div className="text-sm text-gray-600">{selected.provider}</div>
+                      <div className="text-xs text-gray-500 mt-1">{selected.id}</div>
                     </div>
                     
                     <div className={`px-3 py-2 rounded-lg text-sm ${getCategoryColor(selected.category)}`}>
@@ -313,7 +317,7 @@ const SettingsPage = () => {
                     </p>
                   </div>
                 ) : (
-                  <p className="text-gray-500">Nessun modello selezionato</p>
+                  <p className="text-gray-500">Seleziona un modello dalla lista</p>
                 );
               })()}
             </div>
@@ -326,7 +330,7 @@ const SettingsPage = () => {
               
               <button
                 onClick={testModel}
-                disabled={testing}
+                disabled={testing || !selectedModel}
                 className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 disabled:bg-gray-400 transition-colors flex items-center justify-center"
               >
                 {testing ? (
@@ -365,7 +369,8 @@ const SettingsPage = () => {
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <button
                 onClick={saveSettings}
-                className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+                disabled={!selectedModel}
+                className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
               >
                 💾 Salva Impostazioni
               </button>
@@ -390,6 +395,9 @@ const SettingsPage = () => {
                 </div>
                 <div>
                   <strong>Con $1 fai:</strong> ~1000-6000 itinerari
+                </div>
+                <div className="pt-2 border-t">
+                  <strong>Lista aggiornata</strong> automaticamente da OpenRouter
                 </div>
               </div>
             </div>
