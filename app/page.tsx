@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
-import { Plus, MapPin, Clock, Users, Download, Sparkles, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Plus, MapPin, Clock, Users, Download, Sparkles, ArrowLeft, ChevronRight, Lightbulb, Edit3, Trash2 } from 'lucide-react';
 
 const TravelPlanner = () => {
   const [currentScreen, setCurrentScreen] = useState('initial'); // initial, choice, manual, result
@@ -14,6 +14,22 @@ const TravelPlanner = () => {
   });
   const [travelPlan, setTravelPlan] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Prompt suggerito dettagliato
+  const suggestedPrompt = `Vogliamo visitare i luoghi più iconici e caratteristici della città, con un mix equilibrato di cultura, gastronomia locale e vita quotidiana. Ci interessano:
+
+🏛️ CULTURA: Monumenti famosi, musei principali, quartieri storici
+🍝 GASTRONOMIA: Ristoranti tipici locali, specialità da provare, mercati alimentari  
+🚶 ESPERIENZE: Passeggiate panoramiche, vita di quartiere, tradizioni locali
+⏰ RITMO: Viaggio rilassato con tempo per godersi ogni luogo, pause caffè/aperitivi
+💰 BUDGET: Fascia media (né troppo economico né lusso estremo)
+❌ EVITARE: Trappole per turisti, luoghi troppo affollati se possibile
+
+Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttosto che semplici turisti di passaggio.`;
+
+  const fillSuggestedPrompt = () => {
+    setTripData({...tripData, description: suggestedPrompt});
+  };
 
   // Struttura per il piano di viaggio
   const addDay = () => {
@@ -54,6 +70,24 @@ const TravelPlanner = () => {
                       description: '',
                       time: ''
                     }]
+                  }
+                : movement
+            )
+          }
+        : day
+    ));
+  };
+
+  const removeActivity = (dayId, movementId, activityId) => {
+    setTravelPlan(travelPlan.map(day => 
+      day.id === dayId 
+        ? {
+            ...day,
+            movements: day.movements.map(movement =>
+              movement.id === movementId
+                ? {
+                    ...movement,
+                    activities: movement.activities.filter(activity => activity.id !== activityId)
                   }
                 : movement
             )
@@ -125,66 +159,25 @@ const TravelPlanner = () => {
         day: day.day || (index + 1),
         movements: (day.movements || []).map((movement, mIndex) => ({
           id: Date.now() + index * 1000 + mIndex,
-          from: movement.from,
-          to: movement.to,
+          from: movement.from || '',
+          to: movement.to || '',
+          transport: movement.transport || '',
           activities: (movement.activities || []).map((activity, aIndex) => ({
             id: Date.now() + index * 1000 + mIndex * 100 + aIndex,
-            description: activity.description,
-            time: activity.time
+            description: activity.description || '',
+            time: activity.time || '',
+            cost: activity.cost || '',
+            alternatives: activity.alternatives || [],
+            notes: activity.notes || ''
           }))
         }))
       }));
       
       setTravelPlan(formattedPlan);
-      setCurrentScreen('result');
+      setCurrentScreen('manual'); // VA ALLA SCHERMATA EDITABILE!
     } catch (error) {
       console.error('Errore nella generazione:', error);
       alert('Errore nella generazione del piano. Riprova.');
-    }
-    setLoading(false);
-  };
-
-  const enhancePlan = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/generate-plan", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          tripData,
-          travelPlan,
-          action: 'enhance'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const enhancedPlan = JSON.parse(data.content);
-      
-      const formattedPlan = enhancedPlan.map((day, index) => ({
-        id: day.id || Date.now() + index,
-        day: day.day,
-        movements: (day.movements || []).map((movement, mIndex) => ({
-          id: movement.id || Date.now() + index * 1000 + mIndex,
-          from: movement.from,
-          to: movement.to,
-          activities: (movement.activities || []).map((activity, aIndex) => ({
-            id: activity.id || Date.now() + index * 1000 + mIndex * 100 + aIndex,
-            description: activity.description,
-            time: activity.time
-          }))
-        }))
-      }));
-      
-      setTravelPlan(formattedPlan);
-    } catch (error) {
-      console.error('Errore nel miglioramento:', error);
-      alert('Errore nel miglioramento del piano. Riprova.');
     }
     setLoading(false);
   };
@@ -218,10 +211,14 @@ const TravelPlanner = () => {
           id: movement.id || Date.now() + index * 1000 + mIndex,
           from: movement.from,
           to: movement.to,
+          transport: movement.transport || '',
           activities: (movement.activities || []).map((activity, aIndex) => ({
             id: activity.id || Date.now() + index * 1000 + mIndex * 100 + aIndex,
             description: activity.description,
-            time: activity.time
+            time: activity.time,
+            cost: activity.cost || '',
+            alternatives: activity.alternatives || [],
+            notes: activity.notes || ''
           }))
         }))
       }));
@@ -231,6 +228,55 @@ const TravelPlanner = () => {
     } catch (error) {
       console.error('Errore nell\'elaborazione:', error);
       alert('Errore nell\'elaborazione del piano. Riprova.');
+    }
+    setLoading(false);
+  };
+
+  const enhancePlan = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/generate-plan", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tripData,
+          travelPlan,
+          action: 'enhance'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const enhancedPlan = JSON.parse(data.content);
+      
+      const formattedPlan = enhancedPlan.map((day, index) => ({
+        id: day.id || Date.now() + index,
+        day: day.day,
+        movements: (day.movements || []).map((movement, mIndex) => ({
+          id: movement.id || Date.now() + index * 1000 + mIndex,
+          from: movement.from,
+          to: movement.to,
+          transport: movement.transport || '',
+          activities: (movement.activities || []).map((activity, aIndex) => ({
+            id: activity.id || Date.now() + index * 1000 + mIndex * 100 + aIndex,
+            description: activity.description,
+            time: activity.time,
+            cost: activity.cost || '',
+            alternatives: activity.alternatives || [],
+            notes: activity.notes || ''
+          }))
+        }))
+      }));
+      
+      setTravelPlan(formattedPlan);
+    } catch (error) {
+      console.error('Errore nel miglioramento:', error);
+      alert('Errore nel miglioramento del piano. Riprova.');
     }
     setLoading(false);
   };
@@ -304,12 +350,30 @@ const TravelPlanner = () => {
                 />
               </div>
               
-              <textarea
-                placeholder="Descrivi il tipo di viaggio che vorresti... (relax, avventura, cultura, etc.)"
-                value={tripData.description}
-                onChange={(e) => setTripData({...tripData, description: e.target.value})}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent h-24 resize-none"
-              />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700">
+                    Descrivi il tipo di viaggio che vorresti...
+                  </label>
+                  <button
+                    type="button"
+                    onClick={fillSuggestedPrompt}
+                    className="flex items-center gap-1 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full hover:bg-yellow-200 transition-colors"
+                  >
+                    <Lightbulb className="h-3 w-3" />
+                    Usa esempio
+                  </button>
+                </div>
+                <textarea
+                  placeholder="Vogliamo visitare i luoghi più iconici della città, provare la cucina locale, e vivere esperienze autentiche..."
+                  value={tripData.description}
+                  onChange={(e) => setTripData({...tripData, description: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent h-32 resize-none text-sm"
+                />
+                <p className="text-xs text-gray-500">
+                  💡 Più dettagli fornisci, migliore sarà l'itinerario personalizzato
+                </p>
+              </div>
             </div>
             
             <button
@@ -353,7 +417,7 @@ const TravelPlanner = () => {
                   <Sparkles className="h-8 w-8 text-blue-600" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-800 mb-2">Fai tu</h3>
-                <p className="text-gray-600">Lascia che Claude crei l'itinerario perfetto per te automaticamente</p>
+                <p className="text-gray-600">Lascia che l'AI crei l'itinerario con luoghi reali e dettagli pratici, poi modificalo come vuoi</p>
               </div>
             </div>
             
@@ -366,7 +430,7 @@ const TravelPlanner = () => {
                   <Plus className="h-8 w-8 text-green-600" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-800 mb-2">Manuale</h3>
-                <p className="text-gray-600">Costruisci il tuo itinerario passo dopo passo con il tuo controllo</p>
+                <p className="text-gray-600">Costruisci il tuo itinerario da zero, passo dopo passo</p>
               </div>
             </div>
           </div>
@@ -376,7 +440,7 @@ const TravelPlanner = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-8 text-center">
               <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-600">Generando il tuo itinerario...</p>
+              <p className="text-gray-600">Generando il tuo itinerario personalizzato...</p>
             </div>
           </div>
         )}
@@ -384,7 +448,7 @@ const TravelPlanner = () => {
     );
   }
 
-  // Screen manuale
+  // Screen manuale/editabile (per entrambi i flussi!)
   if (currentScreen === 'manual') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -397,7 +461,9 @@ const TravelPlanner = () => {
               <ArrowLeft className="h-5 w-5 mr-2" />
               Torna indietro
             </button>
-            <h2 className="text-3xl font-bold text-gray-800">Costruisci il tuo itinerario</h2>
+            <h2 className="text-3xl font-bold text-gray-800">
+              {travelPlan.length > 0 ? 'Modifica il tuo itinerario' : 'Costruisci il tuo itinerario'}
+            </h2>
             <div></div>
           </div>
           
@@ -436,25 +502,71 @@ const TravelPlanner = () => {
                           />
                         </div>
                         
-                        <div className="space-y-2">
+                        {movement.transport && (
+                          <div className="mb-3">
+                            <input
+                              type="text"
+                              placeholder="Trasporto"
+                              value={movement.transport}
+                              onChange={(e) => updateMovement(day.id, movement.id, 'transport', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                            />
+                          </div>
+                        )}
+                        
+                        <div className="space-y-3">
                           {movement.activities.map((activity) => (
-                            <div key={activity.id} className="flex gap-3">
-                              <input
-                                type="text"
-                                placeholder="Orario (es. 09:00-11:00)"
-                                value={activity.time}
-                                onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'time', e.target.value)}
-                                className="w-48 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                              />
-                              <input
-                                type="text"
-                                placeholder="Descrizione attività"
-                                value={activity.description}
-                                onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'description', e.target.value)}
-                                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                              />
+                            <div key={activity.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
+                              <div className="flex gap-3">
+                                <input
+                                  type="text"
+                                  placeholder="Orario (es. 09:00-11:00)"
+                                  value={activity.time}
+                                  onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'time', e.target.value)}
+                                  className="w-48 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="Descrizione attività"
+                                  value={activity.description}
+                                  onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'description', e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                                <button
+                                  onClick={() => removeActivity(day.id, movement.id, activity.id)}
+                                  className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                              
+                              {activity.cost && (
+                                <input
+                                  type="text"
+                                  placeholder="Costo"
+                                  value={activity.cost}
+                                  onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'cost', e.target.value)}
+                                  className="w-48 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                />
+                              )}
+                              
+                              {activity.notes && (
+                                <textarea
+                                  placeholder="Note e suggerimenti"
+                                  value={activity.notes}
+                                  onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'notes', e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm h-20 resize-none"
+                                />
+                              )}
+                              
+                              {activity.alternatives && activity.alternatives.length > 0 && (
+                                <div className="text-sm text-gray-600">
+                                  <strong>Alternative:</strong> {activity.alternatives.join(', ')}
+                                </div>
+                              )}
                             </div>
                           ))}
+                          
                           <button
                             onClick={() => addActivity(day.id, movement.id)}
                             className="text-sm text-green-600 hover:text-green-800 flex items-center"
@@ -478,34 +590,40 @@ const TravelPlanner = () => {
               </button>
             </div>
             
-            {travelPlan.length > 0 && (
-              <div className="mt-8 pt-8 border-t border-gray-200 text-center">
-                <button
-                  onClick={processPlan}
-                  disabled={loading}
-                  className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors flex items-center mx-auto"
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                      Elaborando...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-5 w-5 mr-2" />
-                      Elabora tu Claude
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
+            <div className="mt-8 pt-8 border-t border-gray-200 text-center space-y-4">
+              {travelPlan.length > 0 && (
+                <>
+                  <button
+                    onClick={processPlan}
+                    disabled={loading}
+                    className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors flex items-center mx-auto"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                        Elaborando...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-5 w-5 mr-2" />
+                        Elabora tu Claude
+                      </>
+                    )}
+                  </button>
+                  
+                  <p className="text-sm text-gray-600">
+                    L'AI completerà e ottimizzerà il tuo itinerario rispettando le tue scelte
+                  </p>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  // Screen risultato
+  // Screen risultato finale
   if (currentScreen === 'result') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -518,8 +636,15 @@ const TravelPlanner = () => {
               <ArrowLeft className="h-5 w-5 mr-2" />
               Nuovo progetto
             </button>
-            <h2 className="text-3xl font-bold text-gray-800">Il tuo itinerario</h2>
+            <h2 className="text-3xl font-bold text-gray-800">Il tuo itinerario finale</h2>
             <div className="flex gap-3">
+              <button
+                onClick={() => setCurrentScreen('manual')}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center"
+              >
+                <Edit3 className="h-4 w-4 mr-2" />
+                Modifica
+              </button>
               <button
                 onClick={enhancePlan}
                 disabled={loading}
@@ -534,7 +659,7 @@ const TravelPlanner = () => {
               </button>
               <button
                 onClick={downloadJSON}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center"
+                className="bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-700 transition-colors flex items-center"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Scarica JSON
@@ -583,6 +708,9 @@ const TravelPlanner = () => {
                           <span className="font-semibold">{movement.from}</span>
                           <ChevronRight className="h-4 w-4 mx-2" />
                           <span className="font-semibold">{movement.to}</span>
+                          {movement.transport && (
+                            <span className="ml-2 text-sm text-gray-500">({movement.transport})</span>
+                          )}
                         </div>
                         
                         <div className="space-y-3">
@@ -592,7 +720,20 @@ const TravelPlanner = () => {
                                 <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold min-w-fit">
                                   {activity.time}
                                 </div>
-                                <p className="text-gray-800 flex-1">{activity.description}</p>
+                                <div className="flex-1">
+                                  <p className="text-gray-800 font-medium">{activity.description}</p>
+                                  {activity.cost && (
+                                    <p className="text-sm text-green-600 mt-1">💰 {activity.cost}</p>
+                                  )}
+                                  {activity.notes && (
+                                    <p className="text-sm text-gray-600 mt-2">💡 {activity.notes}</p>
+                                  )}
+                                  {activity.alternatives && activity.alternatives.length > 0 && (
+                                    <p className="text-sm text-blue-600 mt-2">
+                                      🔄 Alternative: {activity.alternatives.join(', ')}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           ))}
