@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Plus, MapPin, Clock, Users, Download, Sparkles, ArrowLeft, ChevronRight, Lightbulb, Edit3, Trash2 } from 'lucide-react';
+import { Plus, MapPin, Clock, Users, Download, Sparkles, ArrowLeft, ChevronRight, Lightbulb, Edit3, Trash2, Utensils, Camera, Bed, Coffee, ShoppingBag, Music, MapIcon, Plane } from 'lucide-react';
 
 const TravelPlanner = () => {
   const [currentScreen, setCurrentScreen] = useState('initial');
@@ -18,6 +18,10 @@ const TravelPlanner = () => {
   // 🔧 FIX: Gestione corretta localStorage
   const [selectedModel, setSelectedModel] = useState('google/gemma-2-9b-it:free');
   const [isModelLoaded, setIsModelLoaded] = useState(false);
+  
+  // ✅ NUOVO: Tracking modifiche utente
+  const [userHasModified, setUserHasModified] = useState(false);
+  const [lastAIVersion, setLastAIVersion] = useState(null);
 
   // 🔧 FIX: Carica modello selezionato PRIMA di tutto
   useEffect(() => {
@@ -39,6 +43,75 @@ const TravelPlanner = () => {
     }
   }, [selectedModel, isModelLoaded]);
 
+  // ✅ NUOVO: Determina icona per attività
+  const getActivityIcon = (description) => {
+    const desc = description.toLowerCase();
+    
+    if (desc.includes('pranzo') || desc.includes('cena') || desc.includes('colazione') || desc.includes('ristorante') || desc.includes('trattoria') || desc.includes('osteria') || desc.includes('pizzeria')) {
+      return <Utensils className="h-4 w-4 text-orange-600" />;
+    }
+    if (desc.includes('aperitivo') || desc.includes('bar') || desc.includes('caffè') || desc.includes('spritz') || desc.includes('drink')) {
+      return <Coffee className="h-4 w-4 text-amber-600" />;
+    }
+    if (desc.includes('hotel') || desc.includes('check-in') || desc.includes('alloggio') || desc.includes('dormire') || desc.includes('pernottamento')) {
+      return <Bed className="h-4 w-4 text-purple-600" />;
+    }
+    if (desc.includes('museo') || desc.includes('galleria') || desc.includes('mostra') || desc.includes('visita') || desc.includes('monumento') || desc.includes('basilica') || desc.includes('chiesa') || desc.includes('palazzo') || desc.includes('castello')) {
+      return <Camera className="h-4 w-4 text-blue-600" />;
+    }
+    if (desc.includes('shopping') || desc.includes('mercato') || desc.includes('negozi') || desc.includes('acquisti') || desc.includes('souvenir')) {
+      return <ShoppingBag className="h-4 w-4 text-green-600" />;
+    }
+    if (desc.includes('concerto') || desc.includes('spettacolo') || desc.includes('teatro') || desc.includes('opera') || desc.includes('musica')) {
+      return <Music className="h-4 w-4 text-pink-600" />;
+    }
+    if (desc.includes('passeggiata') || desc.includes('camminata') || desc.includes('esplorazione') || desc.includes('quartiere') || desc.includes('centro') || desc.includes('zona')) {
+      return <MapIcon className="h-4 w-4 text-teal-600" />;
+    }
+    if (desc.includes('trasferimento') || desc.includes('aeroporto') || desc.includes('stazione') || desc.includes('volo') || desc.includes('treno')) {
+      return <Plane className="h-4 w-4 text-gray-600" />;
+    }
+    
+    // Default per attività generiche
+    return <Camera className="h-4 w-4 text-blue-600" />;
+  };
+
+  // ✅ NUOVO: Prompt migliorato per evitare troppi pasti
+  const getImprovedPrompt = (action, data) => {
+    const basePrompt = action === 'process' ? 
+      `Elabora questo piano manuale aggiungendo dettagli specifici, orari realistici e riempiendo spazi vuoti:
+${JSON.stringify(data.travelPlan)}
+
+Contesto: ${data.tripData.from} → ${data.tripData.to}, ${data.tripData.duration}, ${data.tripData.people} persone.
+
+IMPORTANTE:
+- Mantieni SEMPRE le scelte dell'utente
+- Aggiungi solo quello che manca 
+- Massimo 1 pasto principale per giorno (pranzo O cena, non entrambi)
+- Focalizzati su ESPERIENZE e LUOGHI piuttosto che cibo
+- Includi orari realistici e costi approssimativi
+- Aggiungi trasporti solo se necessari
+
+Rispondi SOLO con JSON completo nello stesso formato.` :
+
+      `Arricchisci questo itinerario con dettagli specifici, ristoranti reali, costi stimati:
+${JSON.stringify(data.travelPlan)}
+
+Contesto viaggio: ${data.tripData.from} → ${data.tripData.to}, ${data.tripData.duration}, ${data.tripData.people} persone.
+
+IMPORTANTE:
+- Mantieni la struttura esistente
+- Migliora solo descrizioni, orari e dettagli pratici  
+- Massimo 1 pausa food per giorno
+- Focus su CULTURA e ESPERIENZE
+- Aggiungi costi realistici
+- Includi alternative utili
+
+Rispondi SOLO con JSON nello stesso formato ma molto più dettagliato.`;
+
+    return basePrompt;
+  };
+
   const suggestedPrompt = `Vogliamo visitare i luoghi più iconici e caratteristici della città, con un mix equilibrato di cultura, gastronomia locale e vita quotidiana. Ci interessano:
 
 🏛️ CULTURA: Monumenti famosi, musei principali, quartieri storici
@@ -54,13 +127,33 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setTripData({...tripData, description: suggestedPrompt});
   };
 
-  // Gestione piano di viaggio
+  // ✅ NUOVO: Salva snapshot per tracciare modifiche
+  const saveAISnapshot = (plan) => {
+    setLastAIVersion(JSON.stringify(plan));
+    setUserHasModified(false);
+  };
+
+  // ✅ NUOVO: Verifica se utente ha modificato
+  const checkForModifications = () => {
+    if (!lastAIVersion) return false;
+    const currentVersion = JSON.stringify(travelPlan);
+    return currentVersion !== lastAIVersion;
+  };
+
+  useEffect(() => {
+    if (lastAIVersion) {
+      setUserHasModified(checkForModifications());
+    }
+  }, [travelPlan, lastAIVersion]);
+
+  // Gestione piano di viaggio con tracking modifiche
   const addDay = () => {
     setTravelPlan([...travelPlan, {
       id: Date.now(),
       day: travelPlan.length + 1,
       movements: []
     }]);
+    setUserHasModified(true);
   };
 
   const addMovement = (dayId) => {
@@ -77,6 +170,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           }
         : day
     ));
+    setUserHasModified(true);
   };
 
   const addActivity = (dayId, movementId) => {
@@ -99,6 +193,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           }
         : day
     ));
+    setUserHasModified(true);
   };
 
   const removeActivity = (dayId, movementId, activityId) => {
@@ -117,6 +212,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           }
         : day
     ));
+    setUserHasModified(true);
   };
 
   const updateMovement = (dayId, movementId, field, value) => {
@@ -132,6 +228,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           }
         : day
     ));
+    setUserHasModified(true);
   };
 
   const updateActivity = (dayId, movementId, activityId, field, value) => {
@@ -154,9 +251,10 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           }
         : day
     ));
+    setUserHasModified(true);
   };
 
-  // 🔧 FIX: Chiamate API con modello selezionato
+  // 🔧 FIX: Chiamate API con gestione errori migliorata
   const generateAIPlan = async () => {
     console.log('🚀 Usando modello:', selectedModel);
     setLoading(true);
@@ -173,17 +271,30 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
         })
       });
 
+      const responseText = await response.text();
+      console.log('📄 Raw API response:', responseText);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${responseText}`);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        throw new Error(`Errore parsing JSON: ${parseError.message}. Response: ${responseText}`);
+      }
       
       if (data.error) {
         throw new Error(data.error);
       }
 
-      const aiPlan = JSON.parse(data.content);
+      let aiPlan;
+      try {
+        aiPlan = JSON.parse(data.content);
+      } catch (contentParseError) {
+        throw new Error(`Errore parsing contenuto AI: ${contentParseError.message}. Content: ${data.content}`);
+      }
       
       const formattedPlan = aiPlan.map((day, index) => ({
         id: Date.now() + index,
@@ -205,9 +316,10 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       }));
       
       setTravelPlan(formattedPlan);
+      saveAISnapshot(formattedPlan);
       setCurrentScreen('manual');
     } catch (error) {
-      console.error('Errore nella generazione:', error);
+      console.error('❌ Errore nella generazione:', error);
       alert(`Errore nella generazione del piano: ${error.message}`);
     }
     setLoading(false);
@@ -217,6 +329,8 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     console.log('🚀 Processando con modello:', selectedModel);
     setLoading(true);
     try {
+      const prompt = getImprovedPrompt('process', { tripData, travelPlan });
+      
       const response = await fetch("/api/generate-plan", {
         method: "POST",
         headers: {
@@ -226,21 +340,35 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           tripData,
           travelPlan,
           action: 'process',
-          selectedModel: selectedModel
+          selectedModel: selectedModel,
+          customPrompt: prompt
         })
       });
 
+      const responseText = await response.text();
+      console.log('📄 Raw API response:', responseText);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${responseText}`);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        throw new Error(`Errore parsing JSON: ${parseError.message}`);
+      }
       
       if (data.error) {
         throw new Error(data.error);
       }
 
-      const processedPlan = JSON.parse(data.content);
+      let processedPlan;
+      try {
+        processedPlan = JSON.parse(data.content);
+      } catch (contentParseError) {
+        throw new Error(`Errore parsing contenuto AI: ${contentParseError.message}`);
+      }
       
       const formattedPlan = processedPlan.map((day, index) => ({
         id: day.id || Date.now() + index,
@@ -262,9 +390,10 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       }));
       
       setTravelPlan(formattedPlan);
+      saveAISnapshot(formattedPlan);
       setCurrentScreen('result');
     } catch (error) {
-      console.error('Errore nell\'elaborazione:', error);
+      console.error('❌ Errore nell\'elaborazione:', error);
       alert(`Errore nell'elaborazione del piano: ${error.message}`);
     }
     setLoading(false);
@@ -274,6 +403,8 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     console.log('🚀 Migliorando con modello:', selectedModel);
     setLoading(true);
     try {
+      const prompt = getImprovedPrompt('enhance', { tripData, travelPlan });
+      
       const response = await fetch("/api/generate-plan", {
         method: "POST",
         headers: {
@@ -283,21 +414,35 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           tripData,
           travelPlan,
           action: 'enhance',
-          selectedModel: selectedModel
+          selectedModel: selectedModel,
+          customPrompt: prompt
         })
       });
 
+      const responseText = await response.text();
+      console.log('📄 Raw API response:', responseText);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${responseText}`);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        throw new Error(`Errore parsing JSON: ${parseError.message}`);
+      }
       
       if (data.error) {
         throw new Error(data.error);
       }
 
-      const enhancedPlan = JSON.parse(data.content);
+      let enhancedPlan;
+      try {
+        enhancedPlan = JSON.parse(data.content);
+      } catch (contentParseError) {
+        throw new Error(`Errore parsing contenuto AI: ${contentParseError.message}`);
+      }
       
       const formattedPlan = enhancedPlan.map((day, index) => ({
         id: day.id || Date.now() + index,
@@ -319,8 +464,9 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       }));
       
       setTravelPlan(formattedPlan);
+      saveAISnapshot(formattedPlan);
     } catch (error) {
-      console.error('Errore nel miglioramento:', error);
+      console.error('❌ Errore nel miglioramento:', error);
       alert(`Errore nel miglioramento del piano: ${error.message}`);
     }
     setLoading(false);
@@ -343,7 +489,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     URL.revokeObjectURL(url);
   };
 
-  // Screen iniziale - 🚫 RIMOSSO Settings button
+  // Screen iniziale
   if (currentScreen === 'initial') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -508,7 +654,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     );
   }
 
-  // Screen manuale/editabile - 🚫 RIMOSSO Settings button + ✅ AGGIUNTO Export
+  // Screen manuale/editabile - ✅ MIGLIORATO: Bottone condizionale + Icone + Styling
   if (currentScreen === 'manual') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -524,7 +670,6 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
             <h2 className="text-3xl font-bold text-gray-800">
               {travelPlan.length > 0 ? 'Modifica il tuo itinerario' : 'Costruisci il tuo itinerario'}
             </h2>
-            {/* ✅ NUOVO: Export disponibile già qui */}
             {travelPlan.length > 0 && (
               <button
                 onClick={downloadJSON}
@@ -585,22 +730,27 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                         
                         <div className="space-y-3">
                           {movement.activities.map((activity) => (
-                            <div key={activity.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
+                            <div key={activity.id} className="bg-gray-100 border border-gray-300 rounded-lg p-4 space-y-3 shadow-sm">
                               <div className="flex gap-3">
                                 <input
                                   type="text"
                                   placeholder="Orario (es. 09:00-11:00)"
                                   value={activity.time}
                                   onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'time', e.target.value)}
-                                  className="w-48 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                  className="w-48 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                                 />
-                                <input
-                                  type="text"
-                                  placeholder="Descrizione attività"
-                                  value={activity.description}
-                                  onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'description', e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                />
+                                <div className="flex-1 relative">
+                                  <div className="absolute left-3 top-2.5">
+                                    {activity.description && getActivityIcon(activity.description)}
+                                  </div>
+                                  <input
+                                    type="text"
+                                    placeholder="Descrizione attività"
+                                    value={activity.description}
+                                    onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'description', e.target.value)}
+                                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                                  />
+                                </div>
                                 <button
                                   onClick={() => removeActivity(day.id, movement.id, activity.id)}
                                   className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
@@ -615,7 +765,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                                   placeholder="Costo"
                                   value={activity.cost}
                                   onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'cost', e.target.value)}
-                                  className="w-48 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                  className="w-48 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white"
                                 />
                               )}
                               
@@ -624,12 +774,12 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                                   placeholder="Note e suggerimenti"
                                   value={activity.notes}
                                   onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'notes', e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm h-20 resize-none"
+                                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm h-20 resize-none bg-white"
                                 />
                               )}
                               
                               {activity.alternatives && activity.alternatives.length > 0 && (
-                                <div className="text-sm text-gray-600">
+                                <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded">
                                   <strong>Alternative:</strong> {activity.alternatives.join(', ')}
                                 </div>
                               )}
@@ -659,9 +809,16 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
               </button>
             </div>
             
+            {/* ✅ NUOVO: Bottone elabora condizionale */}
             <div className="mt-8 pt-8 border-t border-gray-200 text-center space-y-4">
-              {travelPlan.length > 0 && (
+              {travelPlan.length > 0 && userHasModified && (
                 <>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-blue-800">
+                      🔄 Hai apportato delle modifiche al tuo itinerario
+                    </p>
+                  </div>
+                  
                   <button
                     onClick={processPlan}
                     disabled={loading}
@@ -675,18 +832,24 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                     ) : (
                       <>
                         <Sparkles className="h-5 w-5 mr-2" />
-                        Elabora tu Claude
+                        Elabora le modifiche
                       </>
                     )}
                   </button>
                   
                   <p className="text-sm text-gray-600">
-                    L'AI completerà e ottimizzerà il tuo itinerario rispettando le tue scelte
+                    L'AI completerà e ottimizzerà solo le parti che hai modificato
                   </p>
                   <p className="text-xs text-gray-500">
                     Modello: {selectedModel}
                   </p>
                 </>
+              )}
+              
+              {travelPlan.length > 0 && !userHasModified && (
+                <p className="text-sm text-gray-500">
+                  ✅ Itinerario aggiornato. Apporta modifiche per vedere il bottone "Elabora"
+                </p>
               )}
             </div>
           </div>
@@ -695,7 +858,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     );
   }
 
-  // Screen risultato finale - 🚫 RIMOSSO Settings button
+  // Screen risultato finale - ✅ MIGLIORATO: Icone + Styling
   if (currentScreen === 'result') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -790,10 +953,13 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                         
                         <div className="space-y-3">
                           {movement.activities.map((activity) => (
-                            <div key={activity.id} className="bg-gray-50 rounded-lg p-4">
+                            <div key={activity.id} className="bg-gray-100 border border-gray-300 rounded-lg p-4 shadow-sm">
                               <div className="flex items-start gap-4">
                                 <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold min-w-fit">
                                   {activity.time}
+                                </div>
+                                <div className="flex items-center mr-2">
+                                  {getActivityIcon(activity.description)}
                                 </div>
                                 <div className="flex-1">
                                   <p className="text-gray-800 font-medium">{activity.description}</p>
@@ -801,10 +967,10 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                                     <p className="text-sm text-green-600 mt-1">💰 {activity.cost}</p>
                                   )}
                                   {activity.notes && (
-                                    <p className="text-sm text-gray-600 mt-2">💡 {activity.notes}</p>
+                                    <p className="text-sm text-gray-600 mt-2 bg-blue-50 p-2 rounded">💡 {activity.notes}</p>
                                   )}
                                   {activity.alternatives && activity.alternatives.length > 0 && (
-                                    <p className="text-sm text-blue-600 mt-2">
+                                    <p className="text-sm text-blue-600 mt-2 bg-blue-50 p-2 rounded">
                                       🔄 Alternative: {activity.alternatives.join(', ')}
                                     </p>
                                   )}

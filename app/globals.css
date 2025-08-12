@@ -16,7 +16,6 @@
   }
 }
 
-
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
@@ -55,4 +54,144 @@ body {
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+/* ✅ NUOVO: Animazione per modifiche utente */
+@keyframes pulse-blue {
+  0%, 100% {
+    background-color: rgb(239 246 255);
+    border-color: rgb(147 197 253);
+  }
+  50% {
+    background-color: rgb(219 234 254);
+    border-color: rgb(96 165 250);
+  }
+}
+
+.animate-pulse-blue {
+  animation: pulse-blue 2s ease-in-out infinite;
+}
+
+/* ✅ NUOVO: Hover effects migliorati */
+.activity-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.activity-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* ✅ NUOVO: Icone attività con colori specifici */
+.activity-icon {
+  transition: transform 0.2s ease-in-out;
+}
+
+.activity-icon:hover {
+  transform: scale(1.1);
+}
+
+/* ✅ NUOVO: Miglior contrasto per contenitori */
+.activity-container {
+  background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #d1d5db;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.activity-container:hover {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-color: #9ca3af;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* ✅ NUOVO: Stili per icone attività */
+.icon-food { color: #ea580c; }
+.icon-drink { color: #d97706; }
+.icon-hotel { color: #9333ea; }
+.icon-culture { color: #2563eb; }
+.icon-shopping { color: #16a34a; }
+.icon-music { color: #ec4899; }
+.icon-walk { color: #0d9488; }
+.icon-transport { color: #6b7280; }
+
+/* ✅ NUOVO: Notifica modifiche utente */
+.user-changes-notification {
+  background: linear-gradient(90deg, #dbeafe 0%, #bfdbfe 100%);
+  border-left: 4px solid #3b82f6;
+  animation: slideInFromTop 0.3s ease-out;
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ✅ NUOVO: Stati loading migliorati */
+.loading-overlay {
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.loading-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* ✅ NUOVO: Responsive improvements */
+@media (max-width: 768px) {
+  .activity-container {
+    padding: 0.75rem;
+  }
+  
+  .activity-card {
+    margin-bottom: 0.75rem;
+  }
+}
+
+/* ✅ NUOVO: Focus states migliorati */
+input:focus, textarea:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: #3b82f6;
+  ring-opacity: 0.5;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ✅ NUOVO: Button states */
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0);
+}
+
+/* ✅ NUOVO: Scroll smooth */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ✅ NUOVO: Selection colors */
+::selection {
+  background-color: #3b82f6;
+  color: white;
+}
+
+::-moz-selection {
+  background-color: #3b82f6;
+  color: white;
 }
