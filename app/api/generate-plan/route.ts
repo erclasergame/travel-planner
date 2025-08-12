@@ -44,7 +44,7 @@ Rispondi SOLO con JSON nello stesso formato ma completo e logicamente organizzat
         'X-Title': 'Travel Planner'
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet',
+        model: 'google/gemma-2-9b-it:free',
         messages: [
           {
             role: 'user',
