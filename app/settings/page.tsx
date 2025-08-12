@@ -9,6 +9,7 @@ const SettingsPage = () => {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
 
+  
   // Lista modelli AI con info dettagliate
   const aiModels = [
     // GRATUITI
