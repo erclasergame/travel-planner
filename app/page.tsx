@@ -37,12 +37,12 @@ const TravelPlanner = () => {
          setSelectedModel(data.settings.aiModel);
        } else {
          console.log('⚠️ No global model configured, using default');
-         setSelectedModel('google/gemma-2-9b-it:free');
+         setSelectedModel('z-ai/glm-4.5-air:free');
        }
      } catch (error) {
        console.error('❌ Error loading global model:', error);
        // Fallback al default se API non funziona
-       setSelectedModel('google/gemma-2-9b-it:free');
+       setSelectedModel('z-ai/glm-4.5-air:free');
      }
      setIsModelLoaded(true);
    };
