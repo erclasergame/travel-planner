@@ -16,49 +16,41 @@ const TravelPlanner = () => {
   const [travelPlan, setTravelPlan] = useState([]);
   const [loading, setLoading] = useState(false);
   
- // 🔧 FIX: Modello globale di sistema (non device-specific)
- const [selectedModel, setSelectedModel] = useState(null);
- const [isModelLoaded, setIsModelLoaded] = useState(false);
- 
- // Tracking modifiche utente
- const [userHasModified, setUserHasModified] = useState(false);
- const [lastAIVersion, setLastAIVersion] = useState(null);
+  // 🔧 REDIS: Modello globale dal server (no localStorage)
+  const [selectedModel, setSelectedModel] = useState(null);
+  const [isModelLoaded, setIsModelLoaded] = useState(false);
+  
+  // Tracking modifiche utente
+  const [userHasModified, setUserHasModified] = useState(false);
+  const [lastAIVersion, setLastAIVersion] = useState(null);
 
- // Carica modello globale dal server
- useEffect(() => {
-   const loadGlobalModel = async () => {
-     try {
-       console.log('🔍 Loading global AI model from server...');
-       const response = await fetch('/api/admin-settings');
-       const data = await response.json();
-       
-       if (data.success && data.settings?.aiModel) {
-         console.log('🔄 Global model loaded:', data.settings.aiModel);
-         setSelectedModel(data.settings.aiModel);
-       } else {
-         console.log('⚠️ No global model configured, using default');
-         setSelectedModel('z-ai/glm-4.5-air:free');
-       }
-     } catch (error) {
-       console.error('❌ Error loading global model:', error);
-       // Fallback al default se API non funziona
-       setSelectedModel('z-ai/glm-4.5-air:free'); 
-     }
-     setIsModelLoaded(true);
-   };
-
-   loadGlobalModel();
- }, []);
-
-  // Salva quando cambia (solo se non è null)
+  // 🔥 CARICA MODELLO GLOBALE DAL SERVER (REDIS)
   useEffect(() => {
-    if (isModelLoaded && typeof window !== 'undefined' && selectedModel) {
-      console.log('💾 Saving model to localStorage:', selectedModel);
-      localStorage.setItem('travel-planner-ai-model', selectedModel);
-    }
-  }, [selectedModel, isModelLoaded]);
+    const loadGlobalModel = async () => {
+      try {
+        console.log('📖 Loading global AI model from Redis...');
+        const response = await fetch('/api/admin-settings');
+        const data = await response.json();
+        
+        if (data.success && data.settings?.aiModel) {
+          console.log('✅ Global model loaded:', data.settings.aiModel);
+          setSelectedModel(data.settings.aiModel);
+        } else {
+          console.log('⚠️ No global model configured, using fallback');
+          setSelectedModel('google/gemma-2-9b-it:free');
+        }
+      } catch (error) {
+        console.error('❌ Error loading global model:', error);
+        // Fallback al default se API non funziona
+        setSelectedModel('google/gemma-2-9b-it:free'); 
+      }
+      setIsModelLoaded(true);
+    };
 
-  // Determina icona per attività
+    loadGlobalModel();
+  }, []);
+
+  // Determina icona per attività 
   const getActivityIcon = (description) => {
     const desc = description.toLowerCase();
     
@@ -124,15 +116,14 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     }
   }, [travelPlan, lastAIVersion]);
 
-  // ✅ NUOVO: Generazione diretta AI appena inviato il form
+  // ✅ GENERAZIONE AI con modello globale
   const generateAIPlan = async () => {
-    // 🔧 FIX: Controlla che ci sia un modello configurato
     if (!selectedModel) {
-      alert('⚠️ Nessun modello AI configurato. Vai su /settings per impostarlo.');
+      alert('⚠️ Nessun modello AI configurato. Contatta l\'amministratore.');
       return;
     }
 
-    console.log('🚀 Usando modello:', selectedModel);
+    console.log('🚀 Usando modello globale:', selectedModel);
     setLoading(true);
     try {
       const response = await fetch("/api/generate-plan", {
@@ -193,7 +184,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       
       setTravelPlan(formattedPlan);
       saveAISnapshot(formattedPlan);
-      setCurrentScreen('editor'); // ✅ Vai diretto all'editor
+      setCurrentScreen('editor');
     } catch (error) {
       console.error('❌ Errore nella generazione:', error);
       alert(`Errore nella generazione del piano: ${error.message}`);
@@ -312,11 +303,11 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
   // Chiamate API per miglioramenti
   const processPlan = async () => {
     if (!selectedModel) {
-      alert('⚠️ Nessun modello AI configurato. Vai su /settings per impostarlo.');
+      alert('⚠️ Nessun modello AI configurato. Contatta l\'amministratore.');
       return;
     }
 
-    console.log('🚀 Processando con modello:', selectedModel);
+    console.log('🚀 Processando con modello globale:', selectedModel);
     setLoading(true);
     try {
       const response = await fetch("/api/generate-plan", {
@@ -404,7 +395,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                   <span className="text-red-500">⚠️ Nessun modello configurato</span>
                 )
               ) : (
-                <>Caricando modello...</>
+                <>Caricando modello globale...</>
               )}
             </div>
           </div>
@@ -414,7 +405,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                 <p className="text-sm text-red-800">
                   ⚠️ <strong>Nessun modello AI configurato!</strong><br/>
-                  Vai su <a href="/settings" className="underline font-semibold">/settings</a> per impostare il modello AI.
+                  Contatta l'amministratore per configurare il modello AI.
                 </p>
               </div>
             )}
@@ -495,7 +486,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
               </div>
             </div>
             
-            {/* ✅ NUOVO: Bottone che va diretto alla generazione AI */}
+            {/* ✅ BOTTONE GENERAZIONE CON MODELLO GLOBALE */}
             <button
               onClick={generateAIPlan}
               disabled={!tripData.from || !tripData.to || !tripData.duration || !tripData.people || loading || !selectedModel}
@@ -514,9 +505,10 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
               )}
             </button>
             
-            {/* Debug per controllare modello */}
+            {/* Debug modello */}
             <div className="text-xs text-gray-400 text-center border-t pt-4">
-              <p>Modello attivo: <strong>{selectedModel || 'Non configurato'}</strong></p>
+              <p>Modello globale: <strong>{selectedModel || 'Non configurato'}</strong></p>
+              {selectedModel && <p className="text-green-600">✅ Sistema configurato dall'amministratore</p>}
             </div>
           </div>
         </div>
@@ -584,7 +576,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                 </div>
               </div>
               <div className="text-xs text-gray-500 mt-3">
-                Generato con: {selectedModel}
+                Generato con: {selectedModel} (modello globale)
               </div>
             </div>
 
@@ -759,7 +751,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                     L'AI completerà e ottimizzerà solo le parti che hai modificato
                   </p>
                   <p className="text-xs text-gray-500">
-                    Modello: {selectedModel}
+                    Modello globale: {selectedModel}
                   </p>
                 </>
               )}
