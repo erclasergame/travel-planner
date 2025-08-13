@@ -363,129 +363,137 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     URL.revokeObjectURL(url);
   };
 
-  // ✅ SCREEN 1: Form iniziale
-  if (currentScreen === 'form') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <div className="max-w-lg mx-auto pt-16">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-800 mb-4">Travel Planner</h1>
-            <p className="text-gray-600">Pianifica il tuo viaggio perfetto</p>
-            <div className="text-xs text-gray-500 mt-2">
-              {isModelLoaded ? (
-                <>AI: {selectedModel.split('/')[1]?.split('-')[0] || selectedModel.split('/')[0]}</>
-              ) : (
-                <>Caricando modello...</>
-              )}
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6 animate-fade-in">
-            <div className="space-y-4">
-              <div className="relative">
-                <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Da dove parti?"
-                  value={tripData.from}
-                  onChange={(e) => setTripData({...tripData, from: e.target.value})}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div className="relative">
-                <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Dove vuoi andare?"
-                  value={tripData.to}
-                  onChange={(e) => setTripData({...tripData, to: e.target.value})}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div className="relative">
-                <Clock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Quanto tempo? (es. 5 giorni)"
-                  value={tripData.duration}
-                  onChange={(e) => setTripData({...tripData, duration: e.target.value})}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div className="relative">
-                <Users className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Quante persone?"
-                  value={tripData.people}
-                  onChange={(e) => setTripData({...tripData, people: e.target.value})}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700">
-                    Descrivi il tipo di viaggio che vorresti...
-                  </label>
-                  <button
-                    type="button"
-                    onClick={fillSuggestedPrompt}
-                    className="flex items-center gap-1 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full hover:bg-yellow-200 transition-colors"
-                  >
-                    <Lightbulb className="h-3 w-3" />
-                    Usa esempio
-                  </button>
-                </div>
-                <textarea
-                  placeholder="Vogliamo visitare i luoghi più iconici della città, provare la cucina locale, e vivere esperienze autentiche..."
-                  value={tripData.description}
-                  onChange={(e) => setTripData({...tripData, description: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent h-32 resize-none text-sm"
-                />
-                <p className="text-xs text-gray-500">
-                  💡 Più dettagli fornisci, migliore sarà l'itinerario personalizzato
-                </p>
-              </div>
-            </div>
-            
-            {/* ✅ NUOVO: Bottone che va diretto alla generazione AI */}
-            <button
-              onClick={generateAIPlan}
-              disabled={!tripData.from || !tripData.to || !tripData.duration || !tripData.people || loading}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                  Generando il tuo itinerario...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-5 w-5 mr-2" />
-                  Crea il mio itinerario
-                </>
-              )}
-            </button>
+ // ✅ SCREEN 1: Form iniziale
+ if (currentScreen === 'form') {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="max-w-lg mx-auto pt-16">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">Travel Planner</h1>
+          <p className="text-gray-600">Pianifica il tuo viaggio perfetto</p>
+          <div className="text-xs text-gray-500 mt-2">
+            {isModelLoaded ? (
+              <>AI: {selectedModel.split('/')[1]?.split('-')[0] || selectedModel.split('/')[0]}</>
+            ) : (
+              <>Caricando modello...</>
+            )}
           </div>
         </div>
         
-        {loading && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-8 text-center">
-              <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-600">Generando il tuo itinerario personalizzato...</p>
-              <p className="text-xs text-gray-500 mt-2">Modello: {selectedModel}</p>
+        <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6 animate-fade-in">
+          <div className="space-y-4">
+            <div className="relative">
+              <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Da dove parti?"
+                value={tripData.from}
+                onChange={(e) => setTripData({...tripData, from: e.target.value})}
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
+              />
+            </div>
+            
+            <div className="relative">
+              <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Dove vuoi andare?"
+                value={tripData.to}
+                onChange={(e) => setTripData({...tripData, to: e.target.value})}
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
+              />
+            </div>
+            
+            <div className="relative">
+              <Clock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Quanto tempo? (es. 5 giorni)"
+                value={tripData.duration}
+                onChange={(e) => setTripData({...tripData, duration: e.target.value})}
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
+              />
+            </div>
+            
+            <div className="relative">
+              <Users className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Quante persone?"
+                value={tripData.people}
+                onChange={(e) => setTripData({...tripData, people: e.target.value})}
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">
+                  Descrivi il tipo di viaggio che vorresti...
+                </label>
+                <button
+                  type="button"
+                  onClick={fillSuggestedPrompt}
+                  className="flex items-center gap-1 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full hover:bg-yellow-200 transition-colors"
+                >
+                  <Lightbulb className="h-3 w-3" />
+                  Usa esempio
+                </button>
+              </div>
+              <textarea
+                placeholder="Vogliamo visitare i luoghi più iconici della città, provare la cucina locale, e vivere esperienze autentiche..."
+                value={tripData.description}
+                onChange={(e) => setTripData({...tripData, description: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent h-32 resize-none text-sm bg-white"
+                style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
+              />
+              <p className="text-xs text-gray-500">
+                💡 Più dettagli fornisci, migliore sarà l'itinerario personalizzato
+              </p>
             </div>
           </div>
-        )}
+          
+          <button
+            onClick={generateAIPlan}
+            disabled={!tripData.from || !tripData.to || !tripData.duration || !tripData.people || loading}
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                Generando il tuo itinerario...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-5 w-5 mr-2" />
+                Crea il mio itinerario
+              </>
+            )}
+          </button>
+          
+          {/* Debug per controllare modello */}
+          <div className="text-xs text-gray-400 text-center border-t pt-4">
+            <p>Modello attivo: <strong>{selectedModel}</strong></p>
+          </div>
+        </div>
       </div>
-    );
-  }
-
+      
+      {loading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 text-center">
+            <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-600">Generando il tuo itinerario personalizzato...</p>
+            <p className="text-xs text-gray-500 mt-2">Modello: {selectedModel}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 // ✅ SCREEN 2: Editor itinerario
 if (currentScreen === 'editor') {
   return (
