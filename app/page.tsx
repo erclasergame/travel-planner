@@ -24,17 +24,43 @@ const TravelPlanner = () => {
   const [userHasModified, setUserHasModified] = useState(false);
   const [lastAIVersion, setLastAIVersion] = useState(null);
 
-  // Carica modello selezionato
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('travel-planner-ai-model');
-      if (saved && saved !== selectedModel) {
-        setSelectedModel(saved);
-        console.log('🔄 Modello caricato da localStorage:', saved);
+// 🔧 FIX: Carica modello selezionato con retry per mobile
+useEffect(() => {
+  if (typeof window !== 'undefined') {
+    const loadModel = () => {
+      try {
+        const saved = localStorage.getItem('travel-planner-ai-model');
+        console.log('🔍 Checking localStorage:', saved);
+        
+        if (saved && saved.trim() !== '' && saved !== selectedModel) {
+          console.log('🔄 Loading model from localStorage:', saved);
+          setSelectedModel(saved);
+        } else if (!saved) {
+          console.log('💾 No saved model, keeping default:', selectedModel);
+          localStorage.setItem('travel-planner-ai-model', selectedModel);
+        }
+      } catch (error) {
+        console.error('❌ localStorage error:', error);
       }
       setIsModelLoaded(true);
-    }
-  }, []);
+    };
+
+    // Carica subito
+    loadModel();
+    
+    // Retry dopo un po' per mobile/tablet
+    setTimeout(loadModel, 200);
+    setTimeout(loadModel, 1000);
+  }
+}, []);
+
+// 🔧 FIX: Forza sync quando selectedModel cambia
+useEffect(() => {
+  if (isModelLoaded && typeof window !== 'undefined' && selectedModel) {
+    console.log('💾 Saving model to localStorage:', selectedModel);
+    localStorage.setItem('travel-planner-ai-model', selectedModel);
+  }
+}, [selectedModel, isModelLoaded]);
 
   // Salva modello quando cambia
   useEffect(() => {
