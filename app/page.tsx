@@ -42,7 +42,7 @@ const TravelPlanner = () => {
      } catch (error) {
        console.error('❌ Error loading global model:', error);
        // Fallback al default se API non funziona
-       setSelectedModel('z-ai/glm-4.5-air:free');
+       setSelectedModel('z-ai/glm-4.5-air:free'); 
      }
      setIsModelLoaded(true);
    };
