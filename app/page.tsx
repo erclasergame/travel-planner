@@ -16,44 +16,39 @@ const TravelPlanner = () => {
   const [travelPlan, setTravelPlan] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // 🔧 FIX: Gestione modello AI - SOLO da settings, no default
-  const [selectedModel, setSelectedModel] = useState(null);
-  const [isModelLoaded, setIsModelLoaded] = useState(false);
-  
-  // Tracking modifiche utente
-  const [userHasModified, setUserHasModified] = useState(false);
-  const [lastAIVersion, setLastAIVersion] = useState(null);
+ // 🔧 FIX: Modello globale di sistema (non device-specific)
+ const [selectedModel, setSelectedModel] = useState(null);
+ const [isModelLoaded, setIsModelLoaded] = useState(false);
+ 
+ // Tracking modifiche utente
+ const [userHasModified, setUserHasModified] = useState(false);
+ const [lastAIVersion, setLastAIVersion] = useState(null);
 
-  // 🔧 FIX: Carica SOLO modello da settings, no default
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const loadModel = () => {
-        try {
-          const saved = localStorage.getItem('travel-planner-ai-model');
-          console.log('🔍 Checking localStorage:', saved);
-          
-          if (saved && saved.trim() !== '') {
-            console.log('🔄 Loading model from settings:', saved);
-            setSelectedModel(saved);
-          } else {
-            console.log('⚠️ No model configured in settings');
-            setSelectedModel(null);
-          }
-        } catch (error) {
-          console.error('❌ localStorage error:', error);
-          setSelectedModel(null);
-        }
-        setIsModelLoaded(true);
-      };
+ // Carica modello globale dal server
+ useEffect(() => {
+   const loadGlobalModel = async () => {
+     try {
+       console.log('🔍 Loading global AI model from server...');
+       const response = await fetch('/api/admin-settings');
+       const data = await response.json();
+       
+       if (data.success && data.settings?.aiModel) {
+         console.log('🔄 Global model loaded:', data.settings.aiModel);
+         setSelectedModel(data.settings.aiModel);
+       } else {
+         console.log('⚠️ No global model configured, using default');
+         setSelectedModel('google/gemma-2-9b-it:free');
+       }
+     } catch (error) {
+       console.error('❌ Error loading global model:', error);
+       // Fallback al default se API non funziona
+       setSelectedModel('google/gemma-2-9b-it:free');
+     }
+     setIsModelLoaded(true);
+   };
 
-      // Carica subito
-      loadModel();
-      
-      // Retry per mobile/tablet
-      setTimeout(loadModel, 200);
-      setTimeout(loadModel, 1000);
-    }
-  }, []);
+   loadGlobalModel();
+ }, []);
 
   // Salva quando cambia (solo se non è null)
   useEffect(() => {
