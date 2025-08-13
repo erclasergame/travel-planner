@@ -8,10 +8,8 @@ export async function POST(request: NextRequest) {
     let prompt = '';
     
     if (customPrompt) {
-      // Usa il prompt personalizzato se fornito
       prompt = customPrompt;
     } else {
-      // Genera il prompt standard
       if (action === 'generate') {
         prompt = `Crea un itinerario di viaggio dettagliato per:
 - Da: ${tripData.from}
@@ -27,7 +25,7 @@ IMPORTANTE:
 - Aggiungi trasporti solo se necessari
 - Evita troppe pause food, concentrati su cultura e attività
 
-Rispondi SOLO con JSON valido in questo formato:
+Rispondi SOLO con JSON valido nel formato esatto seguente, NIENT'ALTRO:
 [
   {
     "day": 1,
@@ -35,14 +33,14 @@ Rispondi SOLO con JSON valido in questo formato:
       {
         "from": "luogo partenza",
         "to": "luogo arrivo",
-        "transport": "mezzo di trasporto (opzionale)",
+        "transport": "mezzo di trasporto",
         "activities": [
           {
             "description": "attività dettagliata",
             "time": "09:00-11:00",
-            "cost": "€20 (opzionale)",
+            "cost": "€20",
             "alternatives": ["alt1", "alt2"],
-            "notes": "note utili (opzionale)"
+            "notes": "note utili"
           }
         ]
       }
@@ -50,26 +48,24 @@ Rispondi SOLO con JSON valido in questo formato:
   }
 ]
 
-Crea un itinerario completo con attività specifiche, orari realistici e dettagli pratici. SOLO JSON.`;
+SOLO JSON VALIDO, NO TESTO AGGIUNTIVO.`;
       
       } else if (action === 'enhance') {
-        prompt = `Arricchisci questo itinerario con dettagli specifici, ristoranti reali, costi stimati:
+        prompt = `Arricchisci questo itinerario con dettagli specifici:
 ${JSON.stringify(travelPlan)}
 
-Contesto viaggio: ${tripData.from} → ${tripData.to}, ${tripData.duration}, ${tripData.people} persone.
+Contesto: ${tripData.from} → ${tripData.to}, ${tripData.duration}, ${tripData.people} persone.
 
 IMPORTANTE:
 - Mantieni la struttura esistente
 - Migliora solo descrizioni, orari e dettagli pratici  
 - Massimo 1 pausa food per giorno
 - Focus su CULTURA e ESPERIENZE
-- Aggiungi costi realistici
-- Includi alternative utili
 
-Rispondi SOLO con JSON nello stesso formato ma molto più dettagliato.`;
+Rispondi SOLO con JSON valido nel formato originale, NIENT'ALTRO.`;
       
       } else if (action === 'process') {
-        prompt = `Elabora questo piano manuale aggiungendo dettagli specifici, orari realistici e riempiendo spazi vuoti:
+        prompt = `Elabora questo piano aggiungendo dettagli:
 ${JSON.stringify(travelPlan)}
 
 Contesto: ${tripData.from} → ${tripData.to}, ${tripData.duration}, ${tripData.people} persone.
@@ -77,21 +73,17 @@ Contesto: ${tripData.from} → ${tripData.to}, ${tripData.duration}, ${tripData.
 IMPORTANTE:
 - Mantieni SEMPRE le scelte dell'utente
 - Aggiungi solo quello che manca 
-- Massimo 1 pasto principale per giorno (pranzo O cena, non entrambi)
-- Focalizzati su ESPERIENZE e LUOGHI piuttosto che cibo
-- Includi orari realistici e costi approssimativi
-- Aggiungi trasporti solo se necessari
+- Massimo 1 pasto per giorno
+- Focus su ESPERIENZE e LUOGHI
 
-Mantieni le scelte dell'utente e completa solo quello che manca. Rispondi SOLO con JSON completo.`;
+Rispondi SOLO con JSON valido nel formato originale, NIENT'ALTRO.`;
       }
     }
 
-    // Usa il modello selezionato dall'utente o fallback
     const modelToUse = selectedModel || process.env.AI_MODEL || 'google/gemma-2-9b-it:free';
 
     console.log('🚀 Using AI model:', modelToUse);
     console.log('📝 Action:', action);
-    console.log('📏 Prompt length:', prompt.length);
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -105,12 +97,16 @@ Mantieni le scelte dell'utente e completa solo quello che manca. Rispondi SOLO c
         model: modelToUse,
         messages: [
           {
+            role: 'system',
+            content: 'You are a travel planning assistant. Respond ONLY with valid JSON. Do not add any text, explanations, or formatting outside the JSON.'
+          },
+          {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: 4000,
-        temperature: 0.7,
+        max_tokens: 3000,
+        temperature: 0.3,
         top_p: 0.9
       })
     });
@@ -132,69 +128,124 @@ Mantieni le scelte dell'utente e completa solo quello che manca. Rispondi SOLO c
     
     let content = data.choices[0].message.content;
     
-    console.log('📄 Raw AI response preview:', content.substring(0, 200) + '...');
+    console.log('📄 Raw AI response preview:', content.substring(0, 300) + '...');
     
-    // Pulizia più robusta del JSON
+    // 🔧 PULIZIA JSON SUPER AGGRESSIVA
     content = content.trim();
     
-    // Rimuovi markdown code blocks
-    content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+    // Rimuovi markdown
+    content = content.replace(/```json\s*/g, "").replace(/```\s*/g, "");
     
-    // Rimuovi testo prima del JSON
-    const jsonStart = content.indexOf('[');
-    const jsonStartAlt = content.indexOf('{');
+    // Rimuovi tutto prima del primo [
+    const jsonStartArray = content.indexOf('[');
+    const jsonStartObject = content.indexOf('{');
     
-    if (jsonStart !== -1 && (jsonStartAlt === -1 || jsonStart < jsonStartAlt)) {
+    let jsonStart = -1;
+    if (jsonStartArray !== -1 && (jsonStartObject === -1 || jsonStartArray < jsonStartObject)) {
+      jsonStart = jsonStartArray;
+    } else if (jsonStartObject !== -1) {
+      jsonStart = jsonStartObject;
+    }
+    
+    if (jsonStart !== -1) {
       content = content.substring(jsonStart);
-    } else if (jsonStartAlt !== -1) {
-      content = content.substring(jsonStartAlt);
     }
     
-    // Rimuovi testo dopo il JSON
-    const jsonEnd = content.lastIndexOf(']');
-    const jsonEndAlt = content.lastIndexOf('}');
+    // Rimuovi tutto dopo l'ultimo ] o }
+    const jsonEndArray = content.lastIndexOf(']');
+    const jsonEndObject = content.lastIndexOf('}');
     
-    if (jsonEnd !== -1 && jsonEnd > jsonEndAlt) {
+    let jsonEnd = -1;
+    if (jsonEndArray !== -1 && jsonEndArray > jsonEndObject) {
+      jsonEnd = jsonEndArray;
+    } else if (jsonEndObject !== -1) {
+      jsonEnd = jsonEndObject;
+    }
+    
+    if (jsonEnd !== -1) {
       content = content.substring(0, jsonEnd + 1);
-    } else if (jsonEndAlt !== -1) {
-      content = content.substring(0, jsonEndAlt + 1);
     }
     
-    // Verifica che sia JSON valido prima di inviarlo
+    // 🔧 RIMUOVI TIMESTAMP E ALTRI CAMPI EXTRA
+    content = content.replace(/,?\s*"timestamp":\s*"[^"]*"/g, '');
+    content = content.replace(/,?\s*"generated":\s*"[^"]*"/g, '');
+    content = content.replace(/,?\s*"model":\s*"[^"]*"/g, '');
+    
+    // Fix virgole trailing
+    content = content.replace(/,(\s*[}\]])/g, '$1');
+    
+    // Fix virgole mancanti
+    content = content.replace(/}(\s*{)/g, '},$1');
+    content = content.replace(/](\s*{)/g, '],$1');
+    
+    console.log('🧹 Cleaned content preview:', content.substring(0, 500) + '...');
+    
+    // Test parsing
     try {
       const parsed = JSON.parse(content);
       console.log('✅ JSON validation successful');
-      console.log('📊 Items in response:', Array.isArray(parsed) ? parsed.length : 'Object');
       
-      // Validazione struttura base
+      // Validazione struttura
       if (Array.isArray(parsed)) {
+        console.log('📊 Array with', parsed.length, 'days');
+        
+        // Sanity check
         for (let i = 0; i < parsed.length; i++) {
           const day = parsed[i];
           if (!day.day || !day.movements) {
-            console.warn(`⚠️ Day ${i} missing required fields:`, day);
+            console.warn(`⚠️ Day ${i} missing required fields`);
           }
         }
+      } else {
+        console.log('📊 Single object response');
       }
       
     } catch (parseError) {
       console.error('❌ JSON Parse Error:', parseError);
-      console.error('🔍 Content causing error:', content);
-      console.error('📊 Content length:', content.length);
+      console.error('🔍 Content causing error (first 1000 chars):', content.substring(0, 1000));
       
-      // Tentativo di riparazione automatica
+      // 🔧 ULTIMO TENTATIVO DI RIPARAZIONE
       try {
-        // Prova a fixare JSON comuni issues
+        // Rimuovi caratteri problematici
         let fixedContent = content
-          .replace(/,\s*}/g, '}')  // Rimuovi virgole trailing
-          .replace(/,\s*]/g, ']')  // Rimuovi virgole trailing
-          .replace(/'/g, '"');     // Sostituisci single quotes
+          .replace(/[\x00-\x1F\x7F]/g, '') // Rimuovi caratteri di controllo
+          .replace(/\\n/g, ' ')            // Sostituisci \n con spazi
+          .replace(/\\"/g, '"')            // Fix escaped quotes
+          .replace(/([^\\])\\([^"\\nrt])/g, '$1$2') // Rimuovi backslashes non necessari
+          .replace(/,\s*}/g, '}')          // Rimuovi virgole trailing
+          .replace(/,\s*]/g, ']')          // Rimuovi virgole trailing
+          .replace(/'/g, '"');             // Single quotes to double
+          
+        // Se ancora fallisce, prova a estrarre solo la prima parte valida
+        const firstValidBrace = fixedContent.indexOf('[');
+        if (firstValidBrace !== -1) {
+          let braceCount = 0;
+          let validEnd = -1;
+          
+          for (let i = firstValidBrace; i < fixedContent.length; i++) {
+            if (fixedContent[i] === '[') braceCount++;
+            if (fixedContent[i] === ']') {
+              braceCount--;
+              if (braceCount === 0) {
+                validEnd = i;
+                break;
+              }
+            }
+          }
+          
+          if (validEnd !== -1) {
+            fixedContent = fixedContent.substring(firstValidBrace, validEnd + 1);
+          }
+        }
         
         JSON.parse(fixedContent);
         content = fixedContent;
         console.log('🔧 JSON auto-fixed successfully');
         
       } catch (fixError) {
-        throw new Error(`Invalid JSON from AI model ${modelToUse}. Parse error: ${parseError.message}. Content preview: ${content.substring(0, 500)}`);
+        // Se proprio non riusciamo a ripararlo, restituiamo un errore dettagliato
+        console.error('❌ Auto-fix failed:', fixError);
+        throw new Error(`Invalid JSON from AI model ${modelToUse}. Original error: ${parseError.message}. Content preview: ${content.substring(0, 500)}`);
       }
     }
     
@@ -209,13 +260,6 @@ Mantieni le scelte dell'utente e completa solo quello che manca. Rispondi SOLO c
 
   } catch (error) {
     console.error('❌ API Error:', error);
-    
-    // Logging dettagliato per debug
-    console.error('🔍 Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
     
     return NextResponse.json(
       { 
