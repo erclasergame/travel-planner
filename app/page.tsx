@@ -17,14 +17,14 @@ const TravelPlanner = () => {
   const [loading, setLoading] = useState(false);
   
   // Gestione modello AI
-  const [selectedModel, setSelectedModel] = useState('google/gemma-2-9b-it:free');
+  const [selectedModel, setSelectedModel] = useState(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   
   // Tracking modifiche utente
   const [userHasModified, setUserHasModified] = useState(false);
   const [lastAIVersion, setLastAIVersion] = useState(null);
 
-// 🔧 FIX: Carica modello selezionato con retry per mobile
+// 🔧 FIX: Carica SOLO modello da settings, no default
 useEffect(() => {
   if (typeof window !== 'undefined') {
     const loadModel = () => {
@@ -32,18 +32,36 @@ useEffect(() => {
         const saved = localStorage.getItem('travel-planner-ai-model');
         console.log('🔍 Checking localStorage:', saved);
         
-        if (saved && saved.trim() !== '' && saved !== selectedModel) {
-          console.log('🔄 Loading model from localStorage:', saved);
+        if (saved && saved.trim() !== '') {
+          console.log('🔄 Loading model from settings:', saved);
           setSelectedModel(saved);
-        } else if (!saved) {
-          console.log('💾 No saved model, keeping default:', selectedModel);
-          localStorage.setItem('travel-planner-ai-model', selectedModel);
+        } else {
+          console.log('⚠️ No model configured in settings');
+          setSelectedModel(null);
         }
       } catch (error) {
         console.error('❌ localStorage error:', error);
+        setSelectedModel(null);
       }
       setIsModelLoaded(true);
     };
+
+    // Carica subito
+    loadModel();
+    
+    // Retry per mobile/tablet
+    setTimeout(loadModel, 200);
+    setTimeout(loadModel, 1000);
+  }
+}, []);
+
+// Salva quando cambia (solo se non è null)
+useEffect(() => {
+  if (isModelLoaded && typeof window !== 'undefined' && selectedModel) {
+    console.log('💾 Saving model to localStorage:', selectedModel);
+    localStorage.setItem('travel-planner-ai-model', selectedModel);
+  }
+}, [selectedModel, isModelLoaded]);
 
     // Carica subito
     loadModel();
