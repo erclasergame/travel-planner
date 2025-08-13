@@ -1,35 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, readFile } from 'fs/promises';
-import { join } from 'path';
+import { Redis } from '@upstash/redis';
 
-const SETTINGS_FILE = join(process.cwd(), 'admin-settings.json');
+const redis = Redis.fromEnv();
+const SETTINGS_KEY = 'travel-planner-global-settings';
 
-// Leggi settings admin
+// Leggi settings globali
 export async function GET() {
   try {
-    const data = await readFile(SETTINGS_FILE, 'utf8');
-    const settings = JSON.parse(data);
+    console.log('📖 Reading global settings from Redis...');
     
-    return NextResponse.json({
-      success: true,
-      settings
-    });
+    const settings = await redis.get(SETTINGS_KEY);
+    
+    if (settings) {
+      console.log('✅ Settings found:', settings);
+      return NextResponse.json({
+        success: true,
+        settings
+      });
+    } else {
+      // Se non esistono settings, usa default
+      const defaultSettings = {
+        aiModel: process.env.AI_MODEL || 'google/gemma-2-9b-it:free',
+        lastUpdated: new Date().toISOString(),
+        updatedBy: 'system'
+      };
+      
+      console.log('🔧 Using default settings:', defaultSettings);
+      
+      return NextResponse.json({
+        success: true,
+        settings: defaultSettings
+      });
+    }
+    
   } catch (error) {
-    // Se file non esiste, usa default
-    const defaultSettings = {
-      aiModel: process.env.AI_MODEL || 'google/gemma-2-9b-it:free',
-      lastUpdated: new Date().toISOString(),
-      updatedBy: 'system'
-    };
+    console.error('❌ Error reading settings:', error);
     
     return NextResponse.json({
-      success: true,
-      settings: defaultSettings
-    });
+      success: false,
+      error: error.message
+    }, { status: 500 });
   }
 }
 
-// Salva settings admin
+// Salva settings globali
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -45,18 +59,20 @@ export async function POST(request: NextRequest) {
       updatedBy
     };
     
-    await writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+    console.log('💾 Saving global settings to Redis:', settings);
     
-    console.log('💾 Admin settings saved:', settings);
+    await redis.set(SETTINGS_KEY, settings);
+    
+    console.log('✅ Settings saved successfully');
     
     return NextResponse.json({
       success: true,
-      message: 'Settings saved successfully',
+      message: 'Settings saved globally',
       settings
     });
     
   } catch (error) {
-    console.error('❌ Error saving admin settings:', error);
+    console.error('❌ Error saving settings:', error);
     
     return NextResponse.json({
       success: false,
