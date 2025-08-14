@@ -18,19 +18,19 @@ const TravelPlanner = () => {
     people: '',
     description: ''
   });
-  const [travelPlan, setTravelPlan] = useState([]);
+  const [travelPlan, setTravelPlan] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   
   // ✅ NUOVO: Loading per conversione viewer
   const [convertingToViewer, setConvertingToViewer] = useState(false);
   
-  // 🔧 REDIS: Modello globale dal server (no localStorage)
-  const [selectedModel, setSelectedModel] = useState(null);
+  // 🔧 REDIS: Modello globale dal server (no localStorage) - FIXED TYPING
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   
   // Tracking modifiche utente
   const [userHasModified, setUserHasModified] = useState(false);
-  const [lastAIVersion, setLastAIVersion] = useState(null);
+  const [lastAIVersion, setLastAIVersion] = useState<string | null>(null);
 
   // 🔥 CARICA MODELLO GLOBALE DAL SERVER (REDIS)
   useEffect(() => {
@@ -59,7 +59,7 @@ const TravelPlanner = () => {
   }, []);
 
   // Determina icona per attività 
-  const getActivityIcon = (description) => {
+  const getActivityIcon = (description: string) => {
     const desc = description.toLowerCase();
     
     if (desc.includes('pranzo') || desc.includes('cena') || desc.includes('colazione') || desc.includes('ristorante') || desc.includes('trattoria') || desc.includes('osteria') || desc.includes('pizzeria')) {
@@ -106,7 +106,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
   };
 
   // Salva snapshot per tracciare modifiche
-  const saveAISnapshot = (plan) => {
+  const saveAISnapshot = (plan: any[]) => {
     setLastAIVersion(JSON.stringify(plan));
     setUserHasModified(false);
   };
@@ -144,7 +144,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
         convertedFrom: 'travel_planner'
       };
 
-      console.log('📝 Dati originali preparati:', {
+      console.log('🔍 Dati originali preparati:', {
         days: travelPlan.length,
         from: tripData.from,
         to: tripData.to
@@ -156,7 +156,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       console.log('✅ Conversione completata:', {
         title: convertedItinerary.metadata.title,
         days: convertedItinerary.days.length,
-        totalActivities: convertedItinerary.days.reduce((sum, day) => sum + day.activities.length, 0)
+        totalActivities: convertedItinerary.days.reduce((sum: number, day: any) => sum + day.activities.length, 0)
       });
 
       // Salva in sessionStorage per il viewer
@@ -171,9 +171,10 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       // Redirect alla pagina viewer
       router.push('/viewer/result');
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Errore conversione locale:', error);
-      alert(`Errore durante la conversione: ${error.message}`);
+      const err = error as Error;
+      alert(`Errore durante la conversione: ${err.message}`);
     } finally {
       setConvertingToViewer(false);
     }
@@ -211,8 +212,9 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       let data;
       try {
         data = JSON.parse(responseText);
-      } catch (parseError) {
-        throw new Error(`Errore parsing JSON: ${parseError.message}. Response: ${responseText}`);
+      } catch (parseError: unknown) {
+        const err = parseError as Error;
+        throw new Error(`Errore parsing JSON: ${err.message}. Response: ${responseText}`);
       }
       
       if (data.error) {
@@ -222,19 +224,20 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       let aiPlan;
       try {
         aiPlan = JSON.parse(data.content);
-      } catch (contentParseError) {
-        throw new Error(`Errore parsing contenuto AI: ${contentParseError.message}. Content: ${data.content}`);
+      } catch (contentParseError: unknown) {
+        const err = contentParseError as Error;
+        throw new Error(`Errore parsing contenuto AI: ${err.message}. Content: ${data.content}`);
       }
       
-      const formattedPlan = aiPlan.map((day, index) => ({
+      const formattedPlan = aiPlan.map((day: any, index: number) => ({
         id: Date.now() + index,
         day: day.day || (index + 1),
-        movements: (day.movements || []).map((movement, mIndex) => ({
+        movements: (day.movements || []).map((movement: any, mIndex: number) => ({
           id: Date.now() + index * 1000 + mIndex,
           from: movement.from || '',
           to: movement.to || '',
           transport: movement.transport || '',
-          activities: (movement.activities || []).map((activity, aIndex) => ({
+          activities: (movement.activities || []).map((activity: any, aIndex: number) => ({
             id: Date.now() + index * 1000 + mIndex * 100 + aIndex,
             description: activity.description || '',
             time: activity.time || '',
@@ -248,9 +251,10 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       setTravelPlan(formattedPlan);
       saveAISnapshot(formattedPlan);
       setCurrentScreen('editor');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Errore nella generazione:', error);
-      alert(`Errore nella generazione del piano: ${error.message}`);
+      const err = error as Error;
+      alert(`Errore nella generazione del piano: ${err.message}`);
     }
     setLoading(false);
   };
@@ -265,7 +269,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  const addMovement = (dayId) => {
+  const addMovement = (dayId: number) => {
     setTravelPlan(travelPlan.map(day => 
       day.id === dayId 
         ? {
@@ -282,12 +286,12 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  const addActivity = (dayId, movementId) => {
+  const addActivity = (dayId: number, movementId: number) => {
     setTravelPlan(travelPlan.map(day => 
       day.id === dayId 
         ? {
             ...day,
-            movements: day.movements.map(movement =>
+            movements: day.movements.map((movement: any) =>
               movement.id === movementId
                 ? {
                     ...movement,
@@ -305,16 +309,16 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  const removeActivity = (dayId, movementId, activityId) => {
+  const removeActivity = (dayId: number, movementId: number, activityId: number) => {
     setTravelPlan(travelPlan.map(day => 
       day.id === dayId 
         ? {
             ...day,
-            movements: day.movements.map(movement =>
+            movements: day.movements.map((movement: any) =>
               movement.id === movementId
                 ? {
                     ...movement,
-                    activities: movement.activities.filter(activity => activity.id !== activityId)
+                    activities: movement.activities.filter((activity: any) => activity.id !== activityId)
                   }
                 : movement
             )
@@ -324,12 +328,12 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  const updateMovement = (dayId, movementId, field, value) => {
+  const updateMovement = (dayId: number, movementId: number, field: string, value: string) => {
     setTravelPlan(travelPlan.map(day => 
       day.id === dayId 
         ? {
             ...day,
-            movements: day.movements.map(movement =>
+            movements: day.movements.map((movement: any) =>
               movement.id === movementId
                 ? { ...movement, [field]: value }
                 : movement
@@ -340,16 +344,16 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  const updateActivity = (dayId, movementId, activityId, field, value) => {
+  const updateActivity = (dayId: number, movementId: number, activityId: number, field: string, value: string) => {
     setTravelPlan(travelPlan.map(day => 
       day.id === dayId 
         ? {
             ...day,
-            movements: day.movements.map(movement =>
+            movements: day.movements.map((movement: any) =>
               movement.id === movementId
                 ? {
                     ...movement,
-                    activities: movement.activities.map(activity =>
+                    activities: movement.activities.map((activity: any) =>
                       activity.id === activityId
                         ? { ...activity, [field]: value }
                         : activity
@@ -397,15 +401,15 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
 
       let processedPlan = JSON.parse(data.content);
       
-      const formattedPlan = processedPlan.map((day, index) => ({
+      const formattedPlan = processedPlan.map((day: any, index: number) => ({
         id: day.id || Date.now() + index,
         day: day.day,
-        movements: (day.movements || []).map((movement, mIndex) => ({
+        movements: (day.movements || []).map((movement: any, mIndex: number) => ({
           id: movement.id || Date.now() + index * 1000 + mIndex,
           from: movement.from,
           to: movement.to,
           transport: movement.transport || '',
-          activities: (movement.activities || []).map((activity, aIndex) => ({
+          activities: (movement.activities || []).map((activity: any, aIndex: number) => ({
             id: activity.id || Date.now() + index * 1000 + mIndex * 100 + aIndex,
             description: activity.description,
             time: activity.time,
@@ -418,9 +422,10 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       
       setTravelPlan(formattedPlan);
       saveAISnapshot(formattedPlan);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Errore nell\'elaborazione:', error);
-      alert(`Errore nell'elaborazione del piano: ${error.message}`);
+      const err = error as Error;
+      alert(`Errore nell'elaborazione del piano: ${err.message}`);
     }
     setLoading(false);
   };
@@ -667,7 +672,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
             </div>
 
             <div className="space-y-6">
-              {travelPlan.map((day) => (
+              {travelPlan.map((day: any) => (
                 <div key={day.id} className="border border-gray-200 rounded-xl p-6 bg-gray-50">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-bold text-gray-800 flex items-center">
@@ -686,7 +691,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                   </div>
                   
                   <div className="space-y-4">
-                    {day.movements.map((movement, mIndex) => (
+                    {day.movements.map((movement: any, mIndex: number) => (
                       <div key={movement.id} className="border-l-4 border-blue-300 pl-4 bg-white rounded-lg p-4">
                         <div className="grid grid-cols-2 gap-4 mb-3">
                           <input
@@ -721,7 +726,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                         )}
                         
                         <div className="space-y-3">
-                          {movement.activities.map((activity) => (
+                          {movement.activities.map((activity: any) => (
                             <div key={activity.id} className="bg-gray-200 border-2 border-gray-400 rounded-lg p-4 space-y-3 shadow-sm activity-container">
                               <div className="flex gap-3">
                                 <input
