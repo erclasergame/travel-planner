@@ -151,7 +151,24 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       });
 
       // 🔄 Conversione con utility locale
+      console.log('📋 Input per converter:', originalItinerary);
+
       const convertedItinerary = convertTravelPlannerToViewer(originalItinerary) as any;
+
+      // 🔍 DEBUG CONVERTER OUTPUT
+      console.log('🔍 Converter result type:', typeof convertedItinerary);
+      console.log('🔍 Converter result is null:', convertedItinerary === null);
+      console.log('🔍 Converter result is undefined:', convertedItinerary === undefined);
+
+      if (convertedItinerary) {
+        console.log('✅ Converter result keys:', Object.keys(convertedItinerary));
+        console.log('✅ Has metadata:', !!convertedItinerary.metadata);
+        console.log('✅ Has days:', !!convertedItinerary.days);
+      } else {
+        console.error('❌ Converter returned null/undefined!');
+        alert('Errore: La conversione non ha prodotto risultati');
+        return;
+      }
 
       console.log('✅ Conversione completata:', {
         title: convertedItinerary.metadata.title,
