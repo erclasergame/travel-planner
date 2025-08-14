@@ -227,7 +227,7 @@ Mantieni le scelte dell'utente e completa solo quello che manca. Rispondi SOLO c
           });
           
           if (day.movements) {
-            day.movements.forEach((movement, j) => {
+            day.movements.forEach((movement: any, j: number) => {
               console.log(`  Movement ${j}:`, {
                 hasFrom: !!movement.from,
                 hasTo: !!movement.to,
