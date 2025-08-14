@@ -108,7 +108,7 @@ const SettingsPage = () => {
       }
     } catch (error) {
       console.error('❌ Error saving global settings:', error);
-      alert('❌ Errore nel salvataggio: ' + error.message);
+      alert('❌ Errore nel salvataggio: ' + (error instanceof Error ? error.message : String(error)));
     }
     setSaving(false);
   };
@@ -148,7 +148,7 @@ const SettingsPage = () => {
     } catch (error) {
       setTestResult({
         success: false,
-        message: error.message,
+        message: error instanceof Error ? error.message : String(error),
         data: null
       });
     }
