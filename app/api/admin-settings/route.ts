@@ -38,7 +38,7 @@ export async function GET() {
     
     return NextResponse.json({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : 'Errore sconosciuto'
     }, { status: 500 });
   }
 }
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : 'Errore sconosciuto'
     }, { status: 500 });
   }
 }
