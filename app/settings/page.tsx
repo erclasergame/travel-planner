@@ -73,7 +73,7 @@ const SettingsPage = () => {
   };
 
   // Filtra modelli in base alla ricerca
-  const filteredModels = aiModels.filter(model => 
+  const filteredModels = aiModels.filter((model: any) => 
     model.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     model.provider.toLowerCase().includes(searchTerm.toLowerCase()) ||
     model.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -156,7 +156,7 @@ const SettingsPage = () => {
     setTesting(false);
   };
 
-  const getCategoryColor = (category) => {
+  const getCategoryColor = (category: string) => {
     switch (category) {
       case 'free': return 'bg-green-100 text-green-800';
       case 'cheap': return 'bg-blue-100 text-blue-800';
@@ -165,7 +165,7 @@ const SettingsPage = () => {
     }
   };
 
-  const getCategoryIcon = (category) => {
+  const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'free': return <CheckCircle className="h-4 w-4" />;
       case 'cheap': return <DollarSign className="h-4 w-4" />;
@@ -286,8 +286,8 @@ const SettingsPage = () => {
             )}
 
             {/* Sezioni per categoria */}
-            {!loading && ['free', 'cheap', 'premium'].map(category => {
-              const categoryModels = filteredModels.filter(m => m.category === category);
+            {!loading && ['free', 'cheap', 'premium'].map((category: string) => {
+              const categoryModels = filteredModels.filter((m: any) => m.category === category);
               if (categoryModels.length === 0) return null;
 
               const categoryTitles = {
@@ -306,7 +306,7 @@ const SettingsPage = () => {
                   </h3>
                   
                   <div className="space-y-3">
-                    {categoryModels.map((model) => (
+                    {categoryModels.map((model: any) => (
                       <div
                         key={model.id}
                         onClick={() => setSelectedModel(model.id)}
@@ -371,7 +371,7 @@ const SettingsPage = () => {
               </h3>
               
               {(() => {
-                const selected = aiModels.find(m => m.id === selectedModel);
+                const selected = aiModels.find((m: any) => m.id === selectedModel);
                 return selected ? (
                   <div className="space-y-3">
                     <div>
