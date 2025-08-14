@@ -54,12 +54,16 @@ export async function POST(request: NextRequest) {
       usage: data.usage
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Model Test Error:', error);
+    
+    // Type guard per error handling
+    const err = error as Error;
+    
     return NextResponse.json(
       { 
         success: false,
-        error: error.message 
+        error: err.message
       },
       { status: 500 }
     );
