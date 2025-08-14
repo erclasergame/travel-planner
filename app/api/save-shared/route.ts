@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
       await redis.hincrby(statsKey, `shared_${today}`, 1);
       await redis.hincrby(statsKey, 'total_shared', 1);
       await redis.expire(statsKey, 90 * 24 * 60 * 60); // 90 giorni
-    } catch (statsError) {
+    } catch (statsError: unknown) {
       console.warn('⚠️ [Save Shared] Errore aggiornamento statistiche:', statsError);
       // Non fallire per errori statistiche
     }
@@ -210,10 +210,13 @@ export async function GET(request: NextRequest) {
 
       try {
         const statsKey = 'travel-planner-stats';
-        const stats = await redis.hgetall(statsKey) || {};
+        const rawStats = await redis.hgetall(statsKey);
+        
+        // Type guard per Redis response
+        const stats: Record<string, string> = rawStats || {};
 
         const processedStats = {
-          totalShared: parseInt(stats.total_shared || '0'),
+          totalShared: parseInt(stats['total_shared'] || '0', 10),
           recentShares: {} as Record<string, number>,
           lastUpdated: new Date().toISOString()
         };
@@ -222,7 +225,10 @@ export async function GET(request: NextRequest) {
         Object.keys(stats).forEach(key => {
           if (key.startsWith('shared_')) {
             const date = key.replace('shared_', '');
-            processedStats.recentShares[date] = parseInt(stats[key]);
+            const value = stats[key];
+            if (value) {
+              processedStats.recentShares[date] = parseInt(value, 10);
+            }
           }
         });
 
@@ -231,7 +237,7 @@ export async function GET(request: NextRequest) {
           stats: processedStats
         });
 
-      } catch (statsError) {
+      } catch (statsError: unknown) {
         console.error('❌ [Save Shared] Errore lettura statistiche:', statsError);
         return NextResponse.json({
           success: false,
