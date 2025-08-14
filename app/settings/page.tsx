@@ -12,7 +12,7 @@ const SettingsPage = () => {
   const [aiModels, setAiModels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [globalSettings, setGlobalSettings] = useState(null);
 
   // Carica modelli AI all'avvio
@@ -24,7 +24,7 @@ const SettingsPage = () => {
   // 🔧 NUOVO: Carica settings globali
   const loadGlobalSettings = async () => {
     try {
-      console.log('🔍 Loading global settings...');
+      console.log('📖 Loading global settings...');
       const response = await fetch('/api/admin-settings');
       const data = await response.json();
       
