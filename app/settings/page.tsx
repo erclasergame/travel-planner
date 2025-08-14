@@ -8,12 +8,12 @@ const SettingsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [testResult, setTestResult] = useState(null);
-  const [aiModels, setAiModels] = useState([]);
+  const [testResult, setTestResult] = useState<any>(null);
+  const [aiModels, setAiModels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [globalSettings, setGlobalSettings] = useState(null);
+  const [globalSettings, setGlobalSettings] = useState<any>(null);
 
   // Carica modelli AI all'avvio
   useEffect(() => {
