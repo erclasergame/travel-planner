@@ -210,11 +210,11 @@ export async function GET(request: NextRequest) {
 
       try {
         const statsKey = 'travel-planner-stats';
-        const stats = await redis.hgetall(statsKey);
+        const stats = await redis.hgetall(statsKey) || {};
 
         const processedStats = {
           totalShared: parseInt(stats.total_shared || '0'),
-          recentShares: {},
+          recentShares: {} as Record<string, number>,
           lastUpdated: new Date().toISOString()
         };
 
