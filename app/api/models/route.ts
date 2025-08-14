@@ -1,5 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+type ModelCategory = 'free' | 'cheap' | 'premium';
+
+interface ProcessedModel {
+  id: string;
+  name: string;
+  provider: string;
+  category: ModelCategory;
+  cost: string;
+  description: string;
+  contextLength: string | number;
+  pricing: {
+    prompt: number;
+    completion: number;
+  };
+  topProvider: any;
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Chiamata all'API OpenRouter per ottenere tutti i modelli
@@ -20,12 +37,12 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
     
     // Processa e categorizza i modelli
-    const processedModels = data.data.map((model: any) => {
+    const processedModels: ProcessedModel[] = data.data.map((model: any) => {
       const pricing = model.pricing;
       const promptPrice = parseFloat(pricing?.prompt || '0');
       
       // Determina categoria basata sul prezzo
-      let category = 'premium';
+      let category: ModelCategory = 'premium';
       if (promptPrice === 0) {
         category = 'free';
       } else if (promptPrice < 1) {
@@ -59,9 +76,9 @@ export async function GET(request: NextRequest) {
     });
 
     // Ordina per categoria e prezzo
-    const sortedModels = processedModels.sort((a: any, b: any) => {
+    const sortedModels = processedModels.sort((a: ProcessedModel, b: ProcessedModel) => {
       // Prima i gratuiti, poi economici, poi premium
-      const categoryOrder = { 'free': 0, 'cheap': 1, 'premium': 2 };
+      const categoryOrder: Record<ModelCategory, number> = { 'free': 0, 'cheap': 1, 'premium': 2 };
       if (categoryOrder[a.category] !== categoryOrder[b.category]) {
         return categoryOrder[a.category] - categoryOrder[b.category];
       }
@@ -70,7 +87,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Filtra solo i modelli più rilevanti per travel planning
-    const relevantModels = sortedModels.filter((model: any) => {
+    const relevantModels = sortedModels.filter((model: ProcessedModel) => {
       const modelId = model.id.toLowerCase();
       // Include modelli gratuiti e modelli buoni per text generation
       return model.category === 'free' || 
@@ -91,18 +108,22 @@ export async function GET(request: NextRequest) {
       lastUpdated: new Date().toISOString()
     });
 
-  } catch (error) {
-    console.error('Models API Error:', error);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error('Models API Error:', err);
     
     // Fallback ai modelli statici in caso di errore
-    const fallbackModels = [
+    const fallbackModels: ProcessedModel[] = [
       {
         id: 'google/gemma-2-9b-it:free',
         name: 'Gemma 2 9B',
         provider: 'Google',
         category: 'free',
         cost: 'Gratuito',
-        description: 'Modello gratuito per test e sviluppo'
+        description: 'Modello gratuito per test e sviluppo',
+        contextLength: 'N/A',
+        pricing: { prompt: 0, completion: 0 },
+        topProvider: null
       },
       {
         id: 'meta-llama/llama-3.1-8b-instruct:free',
@@ -110,7 +131,10 @@ export async function GET(request: NextRequest) {
         provider: 'Meta',
         category: 'free',
         cost: 'Gratuito',
-        description: 'Modello open-source potente e gratuito'
+        description: 'Modello open-source potente e gratuito',
+        contextLength: 'N/A',
+        pricing: { prompt: 0, completion: 0 },
+        topProvider: null
       },
       {
         id: 'deepseek/deepseek-chat',
@@ -118,7 +142,10 @@ export async function GET(request: NextRequest) {
         provider: 'DeepSeek',
         category: 'cheap',
         cost: '$0.14/1M',
-        description: 'Ottimo rapporto qualità/prezzo'
+        description: 'Ottimo rapporto qualità/prezzo',
+        contextLength: 'N/A',
+        pricing: { prompt: 0.00014, completion: 0.00028 },
+        topProvider: null
       }
     ];
 
