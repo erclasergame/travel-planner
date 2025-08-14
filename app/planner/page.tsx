@@ -151,7 +151,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       });
 
       // Conversione con utility locale
-      const convertedItinerary = convertTravelPlannerToViewer(originalItinerary);
+      const convertedItinerary = convertTravelPlannerToViewer(originalItinerary) as any;
 
       console.log('✅ Conversione completata:', {
         title: convertedItinerary.metadata.title,
