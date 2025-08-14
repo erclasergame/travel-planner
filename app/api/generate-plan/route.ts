@@ -88,9 +88,9 @@ Mantieni le scelte dell'utente e completa solo quello che manca. Rispondi SOLO c
     const modelToUse = selectedModel || process.env.AI_MODEL || 'google/gemma-2-9b-it:free';
 
     console.log('🚀🚀🚀 ===== DEBUG START =====');
-    console.log('📝 Action:', action);
+    console.log('🎯 Action:', action);
     console.log('🤖 Model:', modelToUse);
-    console.log('📏 Prompt length:', prompt.length);
+    console.log('📝 Prompt length:', prompt.length);
     console.log('📄 Prompt preview:', prompt.substring(0, 200) + '...');
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -239,11 +239,14 @@ Mantieni le scelte dell'utente e completa solo quello che manca. Rispondi SOLO c
         }
       }
       
-    } catch (parseError) {
+    } catch (parseError: unknown) {
       console.error('❌❌❌ JSON PARSE ERROR:');
-      console.error('Error message:', parseError.message);
-      console.error('Error name:', parseError.name);
-      console.error('Error stack:', parseError.stack);
+      
+      // Type guard to safely access error properties
+      const error = parseError as Error;
+      console.error('Error message:', error.message);
+      console.error('Error name:', error.name);
+      console.error('Error stack:', error.stack);
       
       console.log('🔍 CONTENT ANALYSIS:');
       console.log('First 500 chars:', content.substring(0, 500));
@@ -264,8 +267,8 @@ Mantieni le scelte dell'utente e completa solo quello che manca. Rispondi SOLO c
       }
       
       // Try to find the exact error position
-      if (parseError.message.includes('position')) {
-        const match = parseError.message.match(/position (\d+)/);
+      if (error.message && error.message.includes('position')) {
+        const match = error.message.match(/position (\d+)/);
         if (match) {
           const pos = parseInt(match[1]);
           console.log(`🎯 Error at position ${pos}:`);
@@ -274,7 +277,7 @@ Mantieni le scelte dell'utente e completa solo quello che manca. Rispondi SOLO c
         }
       }
       
-      throw new Error(`Invalid JSON from AI model ${modelToUse}. Parse error: ${parseError.message}. Content preview: ${content.substring(0, 500)}`);
+      throw new Error(`Invalid JSON from AI model ${modelToUse}. Parse error: ${error.message}. Content preview: ${content.substring(0, 500)}`);
     }
     
     console.log('🚀🚀🚀 ===== DEBUG END =====');
@@ -288,19 +291,22 @@ Mantieni le scelte dell'utente e completa solo quello che manca. Rispondi SOLO c
       generatedAt: new Date().toISOString()
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ FINAL API ERROR:', error);
+    
+    // Type guard for error handling
+    const err = error as Error;
     console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
+      message: err.message,
+      stack: err.stack,
+      name: err.name
     });
     
     return NextResponse.json(
       { 
         success: false,
-        error: `Errore con modello AI: ${error.message}`,
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        error: `Errore con modello AI: ${err.message}`,
+        details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
         timestamp: new Date().toISOString()
       },
       { status: 500 }
