@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    console.log('📝 [Save Shared] Salvando in Redis:', {
+    console.log('🔍 [Save Shared] Salvando in Redis:', {
       id,
       title: sharedData.metadata.title,
       source,
@@ -179,20 +179,21 @@ export async function POST(request: NextRequest) {
       message: 'Itinerario salvato e pronto per la condivisione'
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [Save Shared] Errore durante il salvataggio:', error);
 
-    // Log dettagliato per debugging
+    // Log dettagliato per debugging con type guard
+    const err = error as Error;
     console.error('Error details:', {
-      name: error?.name,
-      message: error?.message,
-      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+      name: err?.name,
+      message: err?.message,
+      stack: process.env.NODE_ENV === 'development' ? err?.stack : undefined
     });
 
     return NextResponse.json({
       success: false,
       error: 'Errore interno durante il salvataggio',
-      message: error instanceof Error ? error.message : 'Errore sconosciuto',
+      message: err instanceof Error ? err.message : 'Errore sconosciuto',
       timestamp: new Date().toISOString()
     }, { status: 500 });
   }
@@ -250,7 +251,7 @@ export async function GET(request: NextRequest) {
       version: '1.0.0'
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [Save Shared] Errore GET:', error);
     return NextResponse.json({
       success: false,
