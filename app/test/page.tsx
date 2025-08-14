@@ -5,8 +5,8 @@ import { Play, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function TestPage() {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState<any>(null);
 
   const testAPI = async () => {
     setLoading(true);
@@ -45,7 +45,7 @@ export default function TestPage() {
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
-        throw new Error(`Parse error: ${parseError.message}. Raw response: ${responseText}`);
+        throw new Error(`Parse error: ${parseError instanceof Error ? parseError.message : String(parseError)}. Raw response: ${responseText}`);
       }
 
       if (!response.ok) {
@@ -66,9 +66,9 @@ export default function TestPage() {
     } catch (error) {
       console.error('❌ Test error:', error);
       setError({
-        message: error.message,
-        type: error.name,
-        stack: error.stack
+        message: error instanceof Error ? error.message : String(error),
+        type: error instanceof Error ? error.name : 'Unknown',
+        stack: error instanceof Error ? error.stack : undefined
       });
     }
 
