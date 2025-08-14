@@ -107,7 +107,7 @@ export async function GET(
   try {
     const { id } = params;
     
-    console.log('📥 [Get Shared] Richiesta recupero itinerario:', { id });
+    console.log('🔥 [Get Shared] Richiesta recupero itinerario:', { id });
 
     // Validazione ID
     const idValidation = validateId(id);
@@ -142,7 +142,7 @@ export async function GET(
     let data: SharedItineraryData;
     try {
       data = JSON.parse(rawData as string);
-    } catch (parseError) {
+    } catch (parseError: unknown) {
       console.error('❌ [Get Shared] Errore parsing dati Redis:', parseError);
       return NextResponse.json({
         success: false,
@@ -222,20 +222,21 @@ export async function GET(
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [Get Shared] Errore durante il recupero:', error);
 
-    // Log dettagliato per debugging
+    // Log dettagliato per debugging con type guard
+    const err = error as Error;
     console.error('Error details:', {
-      name: error?.name,
-      message: error?.message,
-      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+      name: err?.name,
+      message: err?.message,
+      stack: process.env.NODE_ENV === 'development' ? err?.stack : undefined
     });
 
     return NextResponse.json({
       success: false,
       error: 'Errore interno durante il recupero',
-      message: error instanceof Error ? error.message : 'Errore sconosciuto',
+      message: err instanceof Error ? err.message : 'Errore sconosciuto',
       code: 'INTERNAL_ERROR',
       timestamp: new Date().toISOString()
     }, { status: 500 });
@@ -282,7 +283,7 @@ export async function HEAD(
               'X-Created-At': data.metadata.createdAt
             }
           });
-        } catch (parseError) {
+        } catch (parseError: unknown) {
           return new NextResponse(null, { status: 500 });
         }
       }
@@ -290,7 +291,7 @@ export async function HEAD(
 
     return new NextResponse(null, { status: 404 });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [Get Shared] Errore HEAD:', error);
     return new NextResponse(null, { status: 500 });
   }
