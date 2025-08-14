@@ -30,7 +30,7 @@ const isStorageAvailable = () => {
   } catch (e) {
     console.warn('SessionStorage non disponibile:', e);
     return false;
-  }
+  } 
 };
 
 /**

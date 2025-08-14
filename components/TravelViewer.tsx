@@ -12,7 +12,7 @@ import {
 // Interfacce TypeScript
 interface TripMetadata {
   id: string;
-  title: string;
+  title: string; 
   description?: string;
   duration: number;
   totalKm: number;
