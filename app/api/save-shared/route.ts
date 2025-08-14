@@ -212,8 +212,8 @@ export async function GET(request: NextRequest) {
         const statsKey = 'travel-planner-stats';
         const rawStats = await redis.hgetall(statsKey);
         
-        // Type guard per Redis response
-        const stats: Record<string, string> = rawStats || {};
+        // Type assertion per Redis response (hgetall restituisce sempre stringhe)
+        const stats = (rawStats || {}) as Record<string, string>;
 
         const processedStats = {
           totalShared: parseInt(stats['total_shared'] || '0', 10),
