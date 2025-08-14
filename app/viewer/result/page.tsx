@@ -85,22 +85,68 @@ const ViewerResultPage = () => {
       setLoading(true);
       setError(null);
 
-      // Recupera dati da sessionStorage con type cast
+      console.log('🔍 [Result] Iniziando caricamento dati...');
+
+      // Recupera dati da sessionStorage con debug completo
       const rawData = getConvertedItinerary();
-      const data = rawData as ConvertedData | null;
       
-      if (!data) {
+      console.log('📥 [Result] Raw data from storage:', rawData);
+      console.log('📊 [Result] Raw data type:', typeof rawData);
+      console.log('📏 [Result] Raw data keys:', rawData ? Object.keys(rawData) : 'null');
+      
+      if (!rawData) {
+        console.error('❌ [Result] Nessun dato in sessionStorage');
         setError('Nessun itinerario trovato. I dati potrebbero essere scaduti.');
         return;
       }
 
-      // Validazione struttura dati
-      if (!data.converted || !data.converted.metadata || !data.converted.days) {
-        setError('Dati itinerario non validi o corrotti.');
+      const data = rawData as ConvertedData | null;
+      
+      console.log('🔬 [Result] Casted data:', data);
+      console.log('🔬 [Result] Data.converted exists:', !!data?.converted);
+      console.log('🔬 [Result] Data.converted type:', typeof data?.converted);
+      
+      if (data?.converted) {
+        console.log('🔬 [Result] Converted keys:', Object.keys(data.converted));
+        console.log('🔬 [Result] Metadata exists:', !!data.converted.metadata);
+        console.log('🔬 [Result] Days exists:', !!data.converted.days);
+        
+        if (data.converted.metadata) {
+          console.log('🔬 [Result] Metadata keys:', Object.keys(data.converted.metadata));
+        }
+        
+        if (data.converted.days) {
+          console.log('🔬 [Result] Days count:', data.converted.days.length);
+          console.log('🔬 [Result] Days is array:', Array.isArray(data.converted.days));
+        }
+      }
+
+      // ✅ VALIDAZIONE PIÙ ROBUSTA
+      if (!data || !data.converted) {
+        console.error('❌ [Result] Dati o converted mancanti');
+        setError('Dati itinerario non validi: struttura principale mancante.');
         return;
       }
 
-      console.log('📍 Caricato itinerario:', {
+      if (!data.converted.metadata) {
+        console.error('❌ [Result] Metadata mancanti');
+        setError('Dati itinerario non validi: metadata mancanti.');
+        return;
+      }
+
+      if (!data.converted.days || !Array.isArray(data.converted.days)) {
+        console.error('❌ [Result] Days mancanti o non array');
+        setError('Dati itinerario non validi: giorni mancanti o formato errato.');
+        return;
+      }
+
+      if (data.converted.days.length === 0) {
+        console.error('❌ [Result] Days array vuoto');
+        setError('Dati itinerario non validi: nessun giorno trovato.');
+        return;
+      }
+
+      console.log('✅ [Result] Validazione superata, caricando itinerario:', {
         title: data.converted.metadata.title,
         days: data.converted.days.length,
         source: data.source,
@@ -111,8 +157,9 @@ const ViewerResultPage = () => {
       setSource(data.source);
 
     } catch (error) {
-      console.error('Errore caricamento dati:', error);
-      setError('Errore durante il caricamento dell\'itinerario.');
+      console.error('💥 [Result] Errore caricamento dati:', error);
+      console.error('💥 [Result] Error stack:', error instanceof Error ? error.stack : 'No stack');
+      setError('Errore durante il caricamento dell\'itinerario: ' + (error instanceof Error ? error.message : 'Errore sconosciuto'));
     } finally {
       setLoading(false);
     }
