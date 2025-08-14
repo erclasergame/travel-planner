@@ -144,13 +144,13 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
         convertedFrom: 'travel_planner'
       };
 
-      console.log('🔍 Dati originali preparati:', {
+      console.log('📝 Dati originali preparati:', {
         days: travelPlan.length,
         from: tripData.from,
         to: tripData.to
       });
 
-      // Conversione con utility locale
+      // 🔄 Conversione con utility locale
       const convertedItinerary = convertTravelPlannerToViewer(originalItinerary) as any;
 
       console.log('✅ Conversione completata:', {
@@ -159,11 +159,38 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
         totalActivities: convertedItinerary.days.reduce((sum: number, day: any) => sum + day.activities.length, 0)
       });
 
-      // Salva in sessionStorage per il viewer
+      // 🔧 SALVATAGGIO CORRETTO - con ENTRAMBI i dati
       const saved = saveConvertedItinerary(convertedItinerary, originalItinerary);
+      
+      console.log('💾 Tentativo salvataggio:', {
+        saved,
+        convertedData: !!convertedItinerary,
+        originalData: !!originalItinerary
+      });
       
       if (!saved) {
         console.warn('⚠️ Impossibile salvare in sessionStorage, procedo comunque');
+        
+        // 🆘 FALLBACK: Salva manualmente se la funzione fallisce
+        try {
+          const fallbackData = {
+            converted: convertedItinerary,
+            original: originalItinerary,
+            source: 'internal_conversion',
+            convertedAt: new Date().toISOString()
+          };
+          
+          sessionStorage.setItem('travelViewer_convertedItinerary', JSON.stringify({
+            data: fallbackData,
+            timestamp: Date.now(),
+            expiresAt: Date.now() + (4 * 60 * 60 * 1000), // 4 ore
+            version: '1.0'
+          }));
+          
+          console.log('🆘 Fallback salvataggio completato');
+        } catch (fallbackError) {
+          console.error('💥 Anche fallback fallito:', fallbackError);
+        }
       }
 
       console.log('🚀 Reindirizzando a viewer/result...');
@@ -172,7 +199,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       router.push('/viewer/result');
 
     } catch (error: unknown) {
-      console.error('❌ Errore conversione locale:', error);
+      console.error('💥 Errore conversione locale:', error);
       const err = error as Error;
       alert(`Errore durante la conversione: ${err.message}`);
     } finally {
