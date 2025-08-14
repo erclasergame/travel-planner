@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Search, Settings, Zap, DollarSign, CheckCircle, ArrowLeft, AlertCircle, Loader2, RefreshCw, Globe, Shield } from 'lucide-react';
 
 const SettingsPage = () => {
+  type CategoryType = 'free' | 'cheap' | 'premium';
+  
   const [selectedModel, setSelectedModel] = useState('google/gemma-2-9b-it:free');
   const [searchTerm, setSearchTerm] = useState('');
   const [testing, setTesting] = useState(false);
@@ -156,7 +158,7 @@ const SettingsPage = () => {
     setTesting(false);
   };
 
-  const getCategoryColor = (category: string) => {
+  const getCategoryColor = (category: CategoryType) => {
     switch (category) {
       case 'free': return 'bg-green-100 text-green-800';
       case 'cheap': return 'bg-blue-100 text-blue-800';
@@ -165,7 +167,7 @@ const SettingsPage = () => {
     }
   };
 
-  const getCategoryIcon = (category: string) => {
+  const getCategoryIcon = (category: CategoryType) => {
     switch (category) {
       case 'free': return <CheckCircle className="h-4 w-4" />;
       case 'cheap': return <DollarSign className="h-4 w-4" />;
@@ -286,11 +288,11 @@ const SettingsPage = () => {
             )}
 
             {/* Sezioni per categoria */}
-            {!loading && ['free', 'cheap', 'premium'].map((category: string) => {
+            {!loading && (['free', 'cheap', 'premium'] as CategoryType[]).map((category: CategoryType) => {
               const categoryModels = filteredModels.filter((m: any) => m.category === category);
               if (categoryModels.length === 0) return null;
 
-              const categoryTitles = {
+              const categoryTitles: Record<CategoryType, string> = {
                 free: '🆓 Modelli Gratuiti',
                 cheap: '💰 Modelli Economici',
                 premium: '⭐ Modelli Premium'
