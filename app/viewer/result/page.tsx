@@ -85,8 +85,9 @@ const ViewerResultPage = () => {
       setLoading(true);
       setError(null);
 
-      // Recupera dati da sessionStorage
-      const data = getConvertedItinerary();
+      // Recupera dati da sessionStorage con type cast
+      const rawData = getConvertedItinerary();
+      const data = rawData as ConvertedData | null;
       
       if (!data) {
         setError('Nessun itinerario trovato. I dati potrebbero essere scaduti.');
