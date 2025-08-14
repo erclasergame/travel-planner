@@ -1,16 +1,44 @@
 import React, { useState } from 'react';
 import { Plus, MapPin, Clock, Users, Download, Sparkles, ArrowLeft, ChevronRight } from 'lucide-react';
 
+// Tipi per la struttura del piano di viaggio
+interface Activity {
+  id: number;
+  description: string;
+  time: string;
+}
+
+interface Movement {
+  id: number;
+  from: string;
+  to: string;
+  activities: Activity[];
+}
+
+interface Day {
+  id: number;
+  day: number;
+  movements: Movement[];
+}
+
+interface TripData {
+  from: string;
+  to: string;
+  duration: string;
+  people: string;
+  description: string;
+}
+
 const TravelPlanner = () => {
   const [currentScreen, setCurrentScreen] = useState('initial'); // initial, choice, manual, result
-  const [tripData, setTripData] = useState({
+  const [tripData, setTripData] = useState<TripData>({
     from: '',
     to: '',
     duration: '',
     people: '',
     description: ''
   });
-  const [travelPlan, setTravelPlan] = useState([]);
+  const [travelPlan, setTravelPlan] = useState<Day[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Struttura per il piano di viaggio
@@ -22,7 +50,7 @@ const TravelPlanner = () => {
     }]);
   };
 
-  const addMovement = (dayId) => {
+  const addMovement = (dayId: number) => {
     setTravelPlan(travelPlan.map(day => 
       day.id === dayId 
         ? {
@@ -38,7 +66,7 @@ const TravelPlanner = () => {
     ));
   };
 
-  const addActivity = (dayId, movementId) => {
+  const addActivity = (dayId: number, movementId: number) => {
     setTravelPlan(travelPlan.map(day => 
       day.id === dayId 
         ? {
@@ -60,7 +88,7 @@ const TravelPlanner = () => {
     ));
   };
 
-  const updateMovement = (dayId, movementId, field, value) => {
+  const updateMovement = (dayId: number, movementId: number, field: keyof Omit<Movement, 'id' | 'activities'>, value: string) => {
     setTravelPlan(travelPlan.map(day => 
       day.id === dayId 
         ? {
@@ -75,7 +103,7 @@ const TravelPlanner = () => {
     ));
   };
 
-  const updateActivity = (dayId, movementId, activityId, field, value) => {
+  const updateActivity = (dayId: number, movementId: number, activityId: number, field: keyof Omit<Activity, 'id'>, value: string) => {
     setTravelPlan(travelPlan.map(day => 
       day.id === dayId 
         ? {
@@ -174,14 +202,14 @@ NON aggiungere testo prima o dopo il JSON. SOLO il JSON.`
         throw new Error("La risposta non è un array valido");
       }
       
-      const formattedPlan = aiPlan.map((day, index) => ({
+      const formattedPlan: Day[] = aiPlan.map((day: any, index: number) => ({
         id: Date.now() + index,
         day: day.day || (index + 1),
-        movements: (day.movements || []).map((movement, mIndex) => ({
+        movements: (day.movements || []).map((movement: any, mIndex: number) => ({
           id: Date.now() + index * 1000 + mIndex,
           from: movement.from || "",
           to: movement.to || "",
-          activities: (movement.activities || []).map((activity, aIndex) => ({
+          activities: (movement.activities || []).map((activity: any, aIndex: number) => ({
             id: Date.now() + index * 1000 + mIndex * 100 + aIndex,
             description: activity.description || "",
             time: activity.time || ""
@@ -193,7 +221,7 @@ NON aggiungere testo prima o dopo il JSON. SOLO il JSON.`
       setCurrentScreen('result');
     } catch (error) {
       console.error('Errore dettagliato nella generazione:', error);
-      alert(`Errore nella generazione del piano: ${error.message}. Riprova o usa la modalità manuale.`);
+      alert(`Errore nella generazione del piano: ${error instanceof Error ? error.message : String(error)}. Riprova o usa la modalità manuale.`);
     }
     setLoading(false);
   };
@@ -231,14 +259,14 @@ Rispondi SOLO con il JSON aggiornato nello stesso formato, ma molto più dettagl
       responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       
       const enhancedPlan = JSON.parse(responseText);
-      const formattedPlan = enhancedPlan.map((day, index) => ({
+      const formattedPlan: Day[] = enhancedPlan.map((day: any, index: number) => ({
         id: day.id || Date.now() + index,
         day: day.day,
-        movements: day.movements.map((movement, mIndex) => ({
+        movements: day.movements.map((movement: any, mIndex: number) => ({
           id: movement.id || Date.now() + index * 1000 + mIndex,
           from: movement.from,
           to: movement.to,
-          activities: movement.activities.map((activity, aIndex) => ({
+          activities: movement.activities.map((activity: any, aIndex: number) => ({
             id: activity.id || Date.now() + index * 1000 + mIndex * 100 + aIndex,
             description: activity.description,
             time: activity.time
@@ -285,14 +313,14 @@ Rispondi SOLO con il JSON elaborato nello stesso formato, ma molto più completo
       responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       
       const processedPlan = JSON.parse(responseText);
-      const formattedPlan = processedPlan.map((day, index) => ({
+      const formattedPlan: Day[] = processedPlan.map((day: any, index: number) => ({
         id: day.id || Date.now() + index,
         day: day.day,
-        movements: day.movements.map((movement, mIndex) => ({
+        movements: day.movements.map((movement: any, mIndex: number) => ({
           id: movement.id || Date.now() + index * 1000 + mIndex,
           from: movement.from,
           to: movement.to,
-          activities: movement.activities.map((activity, aIndex) => ({
+          activities: movement.activities.map((activity: any, aIndex: number) => ({
             id: activity.id || Date.now() + index * 1000 + mIndex * 100 + aIndex,
             description: activity.description,
             time: activity.time
