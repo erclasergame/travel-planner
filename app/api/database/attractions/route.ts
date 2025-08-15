@@ -8,20 +8,36 @@ if (!XATA_API_KEY || !XATA_DATABASE_URL) {
 }
 
 // Helper function for Xata API calls
-async function xataQuery(endpoint: string, options: any = {}) {
-  const url = `${XATA_DATABASE_URL}${endpoint}`;
+async function xataQuery(tableName: string, queryBody: any) {
+  // Extract database and branch from URL
+  // URL format: https://workspace.region.xata.sh/db/database_name:branch
+  const urlMatch = XATA_DATABASE_URL.match(/\/db\/([^:]+):(.+)$/);
+  if (!urlMatch) {
+    throw new Error('Invalid Xata database URL format');
+  }
+  
+  const [, dbName, branch] = urlMatch;
+  const endpoint = `/db/${dbName}:${branch}/tables/${tableName}/query`;
+  const url = `${XATA_DATABASE_URL.replace(/\/db\/.*$/, '')}${endpoint}`;
+  
+  console.log('🔗 Xata URL:', url);
+  console.log('📝 Query body:', JSON.stringify(queryBody, null, 2));
   
   const response = await fetch(url, {
-    method: options.method || 'POST',
+    method: 'POST',
     headers: {
       'Authorization': `Bearer ${XATA_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body: JSON.stringify(queryBody),
   });
 
+  console.log('📡 Response status:', response.status);
+
   if (!response.ok) {
-    throw new Error(`Xata API error: ${response.status}`);
+    const errorText = await response.text();
+    console.error('❌ Xata error response:', errorText);
+    throw new Error(`Xata API error: ${response.status} - ${errorText}`);
   }
 
   return response.json();
@@ -51,9 +67,7 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 City query:', JSON.stringify(cityQuery, null, 2));
 
-    const cityResult = await xataQuery('/tables/cities/query', {
-      body: cityQuery
-    });
+    const cityResult = await xataQuery('cities', cityQuery);
 
     console.log('🔍 City result:', JSON.stringify(cityResult, null, 2));
 
@@ -91,9 +105,7 @@ export async function GET(request: NextRequest) {
 
     console.log('🎯 Attraction query:', JSON.stringify(attractionQuery, null, 2));
 
-    const attractionResult = await xataQuery('/tables/attractions/query', {
-      body: attractionQuery
-    });
+    const attractionResult = await xataQuery('attractions', attractionQuery);
 
     console.log('🏛️ Attractions found:', attractionResult.records?.length || 0);
 
@@ -104,9 +116,7 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    const eventResult = await xataQuery('/tables/events/query', {
-      body: eventQuery
-    });
+    const eventResult = await xataQuery('events', eventQuery);
 
     console.log('🎉 Events found:', eventResult.records?.length || 0);
 
