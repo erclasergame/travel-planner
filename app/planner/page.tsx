@@ -16,7 +16,7 @@ import { saveConvertedItinerary } from '@/utils/storageManager';
 const TravelPlanner = () => {
   const router = useRouter();
   
-  // ✅ All existing state management
+  // ✅ All existing state management with proper TypeScript
   const [currentScreen, setCurrentScreen] = useState('form');
   const [tripData, setTripData] = useState({
     from: '',
@@ -26,18 +26,18 @@ const TravelPlanner = () => {
     description: '',
     startDate: ''
   });
-  const [travelPlan, setTravelPlan] = useState([]);
+  const [travelPlan, setTravelPlan] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [convertingToViewer, setConvertingToViewer] = useState(false);
   
-  // Modello globale dal server
+  // Modello globale dal server - FIXED TypeScript
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   
-  // Tracking modifiche utente
+  // Tracking modifiche utente - FIXED TypeScript
   const [userHasModified, setUserHasModified] = useState(false);
   const [lastAIVersion, setLastAIVersion] = useState<string | null>(null);
-  const [itineraryMetadata, setItineraryMetadata] = useState(null);
+  const [itineraryMetadata, setItineraryMetadata] = useState<any>(null);
 
   // ✅ Carica modello globale dal server
   useEffect(() => {
@@ -64,7 +64,7 @@ const TravelPlanner = () => {
     loadGlobalModel();
   }, []);
 
-  // ✅ Utility functions for timeline layout  
+  // ✅ Utility functions for timeline layout - FIXED TypeScript
   const getActivityTypeInfo = (type: string) => {
     const typeMap = {
       travel: { color: '#10b981', icon: '✈️', label: 'TRAVEL' },
@@ -101,7 +101,7 @@ const TravelPlanner = () => {
     return '';
   };
 
-  // Enhanced activity type detection
+  // Enhanced activity type detection - FIXED TypeScript
   const getActivityTypeInfoDetailed = (description: string, existingType?: string) => {
     const desc = description?.toLowerCase() || '';
     
@@ -142,7 +142,7 @@ const TravelPlanner = () => {
     };
   };
 
-  // Enhanced icon system
+  // Enhanced icon system - FIXED TypeScript
   const getActivityIcon = (type: string, subtype?: string) => {
     switch (type) {
       case 'meal':
@@ -166,7 +166,7 @@ const TravelPlanner = () => {
     }
   };
 
-  // Activity colors
+  // Activity colors - FIXED TypeScript
   const getActivityColor = (type: string) => {
     switch (type) {
       case 'meal': return '#f97316';
@@ -179,12 +179,12 @@ const TravelPlanner = () => {
     }
   };
 
-  // Generate activity ID
+  // Generate activity ID - FIXED TypeScript
   const generateActivityId = (dayNumber: number, activityIndex: number) => {
     return `day${dayNumber}-${activityIndex + 1}`;
   };
 
-  // Format date for display
+  // Format date for display - FIXED TypeScript
   const formatDateForDay = (dayNumber: number, startDate?: string) => {
     if (!startDate) {
       return `Day ${dayNumber}`;
@@ -221,7 +221,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setTripData({...tripData, description: suggestedPrompt});
   };
 
-  // Salva snapshot per tracciare modifiche
+  // Salva snapshot per tracciare modifiche - FIXED TypeScript
   const saveAISnapshot = (plan: any[]) => {
     setLastAIVersion(JSON.stringify(plan));
     setUserHasModified(false);
@@ -249,7 +249,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
 
     setConvertingToViewer(true);
     try {
-      console.log('📄 Iniziando conversione locale per viewer...');
+      console.log('🔄 Iniziando conversione locale per viewer...');
 
       const originalItinerary = {
         tripInfo: tripData,
@@ -274,7 +274,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       console.log('✅ Conversione completata:', {
         title: convertedItinerary.metadata.title,
         days: convertedItinerary.days.length,
-        totalActivities: convertedItinerary.days.reduce((sum, day) => sum + day.activities.length, 0)
+        totalActivities: convertedItinerary.days.reduce((sum: number, day: any) => sum + day.activities.length, 0)
       });
 
       const saved = saveConvertedItinerary(convertedItinerary, originalItinerary);
@@ -286,7 +286,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       console.log('🚀 Reindirizzando a viewer/result...');
       router.push('/viewer/result');
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Errore conversione locale:', error);
       alert(`Errore durante la conversione: ${error.message}`);
     } finally {
@@ -329,7 +329,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       let data;
       try {
         data = JSON.parse(responseText);
-      } catch (parseError) {
+      } catch (parseError: any) {
         throw new Error(`Errore parsing JSON: ${parseError.message}. Response: ${responseText}`);
       }
       
@@ -340,7 +340,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       let aiResponse;
       try {
         aiResponse = JSON.parse(data.content);
-      } catch (contentParseError) {
+      } catch (contentParseError: any) {
         throw new Error(`Errore parsing contenuto AI: ${contentParseError.message}. Content: ${data.content}`);
       }
       
@@ -411,14 +411,14 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       saveAISnapshot(formattedPlan);
       setCurrentScreen('editor');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Errore nella generazione:', error);
       alert(`Errore nella generazione del piano: ${error.message}`);
     }
     setLoading(false);
   };
 
-  // Gestione piano di viaggio
+  // Gestione piano di viaggio - FIXED TypeScript
   const addDay = () => {
     const newDay = {
       id: Date.now(),
@@ -513,7 +513,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  // Enhanced activity update with type detection
+  // Enhanced activity update with type detection - FIXED TypeScript
   const updateActivity = (dayId: number, movementId: number, activityId: number, field: string, value: string) => {
     setTravelPlan(travelPlan.map((day: any) => 
       day.id === dayId 
@@ -551,7 +551,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  // Process plan
+  // Process plan - FIXED TypeScript
   const processPlan = async () => {
     if (!selectedModel) {
       alert('⚠️ Nessun modello AI configurato. Contatta l\'amministratore.');
@@ -623,7 +623,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       
       setTravelPlan(formattedPlan);
       saveAISnapshot(formattedPlan);
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Errore nell\'elaborazione:', error);
       alert(`Errore nell'elaborazione del piano: ${error.message}`);
     }
@@ -1027,8 +1027,8 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
             </div>
           </div>
 
-          {/* Timeline Layout per ogni giorno */}
-          {travelPlan.map((day) => (
+          {/* Timeline Layout per ogni giorno - FIXED TypeScript */}
+          {travelPlan.map((day: any) => (
             <div key={day.id} className="bg-white rounded-2xl shadow-xl p-8 mb-8">
               <div className="flex items-center justify-between mb-6">
                 <h1 className="text-3xl font-bold text-gray-800">
@@ -1047,8 +1047,8 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                 {/* Timeline line */}
                 <div className="timeline-line"></div>
                 
-                {/* Render attività per questo giorno */}
-                {day.movements.map((movement) => 
+                {/* Render attività per questo giorno - FIXED TypeScript */}
+                {day.movements.map((movement: any) => 
                   movement.activities.map((activity: any, activityIndex: number) => {
                     const typeInfo = getActivityTypeInfo(activity.type);
                     
@@ -1239,6 +1239,44 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
             <Plus className="h-6 w-6 mr-2" />
             Aggiungi {formatDateForDay(travelPlan.length + 1, tripData.startDate)}
           </button>
+
+          {/* Process Plan Button - FIXED TypeScript */}
+          {travelPlan.length > 0 && userHasModified && (
+            <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-blue-800 font-medium">
+                  📝 Hai apportato delle modifiche al tuo itinerario
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <button
+                  onClick={processPlan}
+                  disabled={loading}
+                  className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors flex items-center mx-auto"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                      Elaborando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-5 w-5 mr-2" />
+                      Elabora le modifiche
+                    </>
+                  )}
+                </button>
+                
+                <p className="text-sm text-gray-600 mt-2">
+                  L'AI completerà e ottimizzerà solo le parti che hai modificato
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Modello globale: {selectedModel}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
