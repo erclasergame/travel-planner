@@ -43,8 +43,6 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Searching for city:', cityName);
 
     // Step 1: Find the city - simplified query for Xata
-    console.log('🔍 Searching for city:', cityName);
-    
     const cityQuery = {
       filter: {
         name: cityName  // Simple exact match first
@@ -59,11 +57,7 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 City result:', JSON.stringify(cityResult, null, 2));
 
-    const cityResult = await xataQuery('/tables/cities/query', {
-      body: cityQuery
-    });
-
-    if (!cityResult.records || cityResult.records.length === 0) {
+    if (!cityResult || !cityResult.records || cityResult.records.length === 0) {
       console.log('❌ City not found:', cityName);
       return NextResponse.json({
         success: false,
