@@ -1,11 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
-import { Upload, Database, CheckCircle, AlertCircle, Loader2, Trash2, Eye, Download } from 'lucide-react';
-
-// Xata configuration
-const XATA_API_KEY = process.env.NEXT_PUBLIC_XATA_API_KEY || '';
-const XATA_DATABASE_URL = process.env.NEXT_PUBLIC_XATA_DATABASE_URL || '';
+import { Upload, Database, CheckCircle, AlertCircle, Loader2, Trash2, Eye } from 'lucide-react';
 
 interface UploadResult {
   success: boolean;
@@ -24,63 +20,13 @@ const BulkUploadPage = () => {
 
   // Available tables
   const tables = [
-    { value: 'continents', label: 'Continenti', example: '[{"name": "Europa", "code": "EU"}]' },
-    { value: 'countries', label: 'Paesi', example: '[{"continent_id": 1, "name": "Italia", "code": "IT", "flag_url": "https://..."}]' },
-    { value: 'regions', label: 'Regioni', example: '[{"country_id": 1, "name": "Lombardia", "type": "region"}]' },
-    { value: 'cities', label: 'Città', example: '[{"region_id": 1, "name": "Milano", "type": "major", "lat": 45.4642, "lng": 9.1900, "population": 1400000}]' },
-    { value: 'attractions', label: 'Attrazioni', example: '[{"city_id": 1, "name": "Duomo", "description": "Cattedrale gotica", "type": "monument", "subtype": "religious", "lat": 45.464, "lng": 9.192, "visit_duration": "1h30m", "cost_range": "€8", "image_url": "https://...", "is_active": true}]' },
-    { value: 'events', label: 'Eventi', example: '[{"city_id": 1, "name": "Salone del Mobile", "description": "Fiera design", "recurrence_rule": "aprile", "season": "spring", "duration": "1 settimana", "cost_range": "€15-25", "image_url": "https://...", "is_active": true}]' }
+    { value: 'continents', label: 'Continenti' },
+    { value: 'countries', label: 'Paesi' },
+    { value: 'regions', label: 'Regioni' },
+    { value: 'cities', label: 'Città' },
+    { value: 'attractions', label: 'Attrazioni' },
+    { value: 'events', label: 'Eventi' }
   ];
-
-  // Helper function for Xata API calls
-  const xataQuery = async (tableName: string, method: string, data?: any) => {
-    if (!XATA_DATABASE_URL || !XATA_API_KEY) {
-      throw new Error('Xata configuration missing');
-    }
-
-    // Extract database and branch from URL
-    const urlMatch = XATA_DATABASE_URL.match(/\/db\/([^:]+):(.+)$/);
-    if (!urlMatch) {
-      throw new Error('Invalid Xata database URL format');
-    }
-
-    const [, dbName, branch] = urlMatch;
-    const baseUrl = XATA_DATABASE_URL.replace(/\/db\/.*$/, '');
-    let endpoint = '';
-    
-    if (method === 'POST' && data) {
-      // Bulk insert endpoint
-      endpoint = `/db/${dbName}:${branch}/tables/${tableName}/data`;
-    } else {
-      // Query endpoint  
-      endpoint = `/db/${dbName}:${branch}/tables/${tableName}/query`;
-    }
-
-    const url = `${baseUrl}${endpoint}`;
-    
-    console.log('🔗 Xata URL:', url);
-    console.log('📝 Method:', method);
-    console.log('📝 Data:', data);
-
-    const response = await fetch(url, {
-      method: method,
-      headers: {
-        'Authorization': `Bearer ${XATA_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: data ? JSON.stringify(data) : undefined,
-    });
-
-    console.log('📡 Response status:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Xata error:', errorText);
-      throw new Error(`Xata API error: ${response.status} - ${errorText}`);
-    }
-
-    return response.json();
-  };
 
   // Validate and parse JSON
   const validateJson = (text: string) => {
@@ -123,37 +69,28 @@ const BulkUploadPage = () => {
     setResult(null);
 
     try {
-      const data = validation.data!;
-      console.log(`🚀 Uploading ${data.length} records to ${selectedTable}`);
-
-      let insertedCount = 0;
-      const errors: string[] = [];
-
-      // Insert records one by one (safer than bulk)
-      for (let i = 0; i < data.length; i++) {
-        const record = data[i];
-        
-        try {
-          // For single record insert, use the data endpoint
-          await xataQuery(selectedTable, 'POST', record);
-          insertedCount++;
-          console.log(`✅ Inserted record ${i + 1}/${data.length}`);
-        } catch (error: any) {
-          const errorMsg = `Record ${i + 1}: ${error.message}`;
-          errors.push(errorMsg);
-          console.error('❌ Insert error:', errorMsg);
-        }
-      }
-
-      setResult({
-        success: insertedCount > 0,
-        inserted: insertedCount,
-        errors,
-        details: {
-          total: data.length,
-          failed: errors.length
-        }
+      const response = await fetch('/api/admin/bulk-upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          table: selectedTable,
+          data: validation.data
+        })
       });
+
+      const uploadResult = await response.json();
+
+      if (response.ok) {
+        setResult(uploadResult);
+      } else {
+        setResult({
+          success: false,
+          inserted: 0,
+          errors: [uploadResult.error || 'Errore durante upload']
+        });
+      }
 
     } catch (error: any) {
       console.error('❌ Upload error:', error);
@@ -177,9 +114,49 @@ const BulkUploadPage = () => {
 
   // Load example data
   const loadExample = () => {
-    const table = tables.find(t => t.value === selectedTable);
-    if (table) {
-      setJsonData(table.example);
+    const examples: any = {
+      attractions: JSON.stringify([
+        {
+          city_id: 1,
+          name: "Esempio Attrazione",
+          description: "Descrizione di esempio",
+          type: "monument",
+          subtype: "historical",
+          lat: 41.9028,
+          lng: 12.4964,
+          visit_duration: "2h",
+          cost_range: "€15",
+          image_url: "https://images.unsplash.com/photo-1552832230-c0197dd311b5",
+          is_active: true
+        }
+      ], null, 2),
+      events: JSON.stringify([
+        {
+          city_id: 1,
+          name: "Esempio Evento",
+          description: "Descrizione evento",
+          recurrence_rule: "maggio",
+          season: "spring",
+          duration: "3 giorni",
+          cost_range: "€10-20",
+          image_url: "https://images.unsplash.com/photo-1541961017774-22349e4a1262",
+          is_active: true
+        }
+      ], null, 2),
+      cities: JSON.stringify([
+        {
+          region_id: 1,
+          name: "Milano",
+          type: "major",
+          lat: 45.4642,
+          lng: 9.1900,
+          population: 1400000
+        }
+      ], null, 2)
+    };
+
+    if (examples[selectedTable]) {
+      setJsonData(examples[selectedTable]);
     }
   };
 
@@ -324,13 +301,6 @@ const BulkUploadPage = () => {
                     {tables.find(t => t.value === selectedTable)?.label}
                   </p>
                 </div>
-                
-                <div>
-                  <span className="text-sm text-gray-600">Esempio formato:</span>
-                  <pre className="text-xs text-gray-600 mt-1 p-2 bg-gray-50 rounded overflow-x-auto">
-                    {tables.find(t => t.value === selectedTable)?.example}
-                  </pre>
-                </div>
               </div>
             </div>
 
@@ -376,62 +346,6 @@ const BulkUploadPage = () => {
                 </div>
               </div>
             )}
-
-            {/* Quick Actions */}
-            <div className="bg-white rounded-2xl shadow-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                ⚡ Azioni Rapide
-              </h3>
-              
-              <div className="space-y-3">
-                <button
-                  onClick={() => setJsonData(JSON.stringify([
-                    {
-                      "city_id": 1,
-                      "name": "Esempio Attrazione",
-                      "description": "Descrizione di esempio",
-                      "type": "monument",
-                      "subtype": "historical",
-                      "lat": 41.9028,
-                      "lng": 12.4964,
-                      "visit_duration": "2h",
-                      "cost_range": "€15",
-                      "image_url": "https://images.unsplash.com/photo-1552832230-c0197dd311b5",
-                      "is_active": true
-                    }
-                  ], null, 2))}
-                  className="w-full text-sm bg-green-100 text-green-700 py-2 px-4 rounded-lg hover:bg-green-200 transition-colors"
-                >
-                  📝 Template Attrazione
-                </button>
-                
-                <button
-                  onClick={() => setJsonData(JSON.stringify([
-                    {
-                      "city_id": 1,
-                      "name": "Esempio Evento",
-                      "description": "Descrizione evento",
-                      "recurrence_rule": "maggio",
-                      "season": "spring",
-                      "duration": "3 giorni",
-                      "cost_range": "€10-20",
-                      "image_url": "https://images.unsplash.com/photo-1541961017774-22349e4a1262",
-                      "is_active": true
-                    }
-                  ], null, 2))}
-                  className="w-full text-sm bg-blue-100 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-200 transition-colors"
-                >
-                  🎉 Template Evento
-                </button>
-                
-                <a
-                  href="/admin/database"
-                  className="block w-full text-sm bg-purple-100 text-purple-700 py-2 px-4 rounded-lg hover:bg-purple-200 transition-colors text-center"
-                >
-                  🔍 Visualizza Database
-                </a>
-              </div>
-            </div>
           </div>
         </div>
 
