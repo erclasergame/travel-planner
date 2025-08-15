@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Cerca attrazioni per la città
-    const attractions = await XataHelper.getAttractionsByCity(foundCity.id, type || undefined);
+    const attractions = await XataHelper.getAttractionsByCity(foundCity.id);
     const events = await XataHelper.getEventsByCity(foundCity.id);
 
     console.log(`✅ Found ${attractions.length} attractions and ${events.length} events for ${city}`);
