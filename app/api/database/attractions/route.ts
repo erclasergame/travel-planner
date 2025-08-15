@@ -2,7 +2,7 @@
 // File: app/api/database/attractions/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import xataClient, { XataHelper, Attraction, City } from '@/lib/xata';
+import { XataHelper, Attraction, City } from '@/lib/xata';
 
 // GET - Cerca attrazioni per città
 export async function GET(request: NextRequest) {
