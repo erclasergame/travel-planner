@@ -277,12 +277,12 @@ const TravelPlanner = () => {
 
   const suggestedPrompt = `Vogliamo visitare i luoghi più iconici e caratteristici della città, con un mix equilibrato di cultura, gastronomia locale e vita quotidiana. Ci interessano:
 
-🏛️ CULTURA: Monumenti famosi, musei principali, quartieri storici
-🍝 GASTRONOMIA: Ristoranti tipici locali, specialità da provare, mercati alimentari  
-🚶 ESPERIENZE: Passeggiate panoramiche, vita di quartiere, tradizioni locali
-⏰ RITMO: Viaggio rilassato con tempo per godersi ogni luogo, pause caffè/aperitivi
-💰 BUDGET: Fascia media (né troppo economico né lusso estremo)
-❌ EVITARE: Trappole per turisti, luoghi troppo affollati se possibile
+CULTURA: Monumenti famosi, musei principali, quartieri storici
+GASTRONOMIA: Ristoranti tipici locali, specialità da provare, mercati alimentari  
+ESPERIENZE: Passeggiate panoramiche, vita di quartiere, tradizioni locali
+RITMO: Viaggio rilassato con tempo per godersi ogni luogo, pause caffè/aperitivi
+BUDGET: Fascia media (né troppo economico né lusso estremo)
+EVITARE: Trappole per turisti, luoghi troppo affollati se possibile
 
 Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttosto che semplici turisti di passaggio.`;
 
