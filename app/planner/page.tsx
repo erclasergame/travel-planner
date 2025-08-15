@@ -78,7 +78,7 @@ const TravelPlanner = () => {
     return typeMap[type as keyof typeof typeMap] || typeMap.activity;
   };
 
-  const formatDuration = (time) => {
+  const formatDuration = (time: string) => {
     if (!time || !time.includes('-')) return '';
     const [start, end] = time.split('-');
     if (!start || !end) return '';
@@ -102,7 +102,7 @@ const TravelPlanner = () => {
   };
 
   // Enhanced activity type detection
-  const getActivityTypeInfoDetailed = (description, existingType) => {
+  const getActivityTypeInfoDetailed = (description: string, existingType?: string) => {
     const desc = description?.toLowerCase() || '';
     
     if (existingType) {
@@ -143,7 +143,7 @@ const TravelPlanner = () => {
   };
 
   // Enhanced icon system
-  const getActivityIcon = (type, subtype) => {
+  const getActivityIcon = (type: string, subtype?: string) => {
     switch (type) {
       case 'meal':
         if (subtype === 'breakfast') return <Coffee className="h-4 w-4 text-amber-600" />;
@@ -167,7 +167,7 @@ const TravelPlanner = () => {
   };
 
   // Activity colors
-  const getActivityColor = (type) => {
+  const getActivityColor = (type: string) => {
     switch (type) {
       case 'meal': return '#f97316';
       case 'accommodation': return '#8b5cf6';
@@ -180,12 +180,12 @@ const TravelPlanner = () => {
   };
 
   // Generate activity ID
-  const generateActivityId = (dayNumber, activityIndex) => {
+  const generateActivityId = (dayNumber: number, activityIndex: number) => {
     return `day${dayNumber}-${activityIndex + 1}`;
   };
 
   // Format date for display
-  const formatDateForDay = (dayNumber, startDate) => {
+  const formatDateForDay = (dayNumber: number, startDate?: string) => {
     if (!startDate) {
       return `Day ${dayNumber}`;
     }
@@ -351,16 +351,16 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       if (aiResponse.metadata && aiResponse.itinerary) {
         console.log('✅ Detected new format v2.0 with metadata');
         metadata = aiResponse.metadata;
-        formattedPlan = aiResponse.itinerary.map((day, index) => ({
+        formattedPlan = aiResponse.itinerary.map((day: any, index: number) => ({
           id: Date.now() + index,
           day: day.day || (index + 1),
           date: formatDateForDay(day.day || (index + 1), tripData.startDate),
-          movements: (day.movements || []).map((movement, mIndex) => ({
+          movements: (day.movements || []).map((movement: any, mIndex: number) => ({
             id: Date.now() + index * 1000 + mIndex,
             from: movement.from || '',
             to: movement.to || '',
             transport: movement.transport || '',
-            activities: (movement.activities || []).map((activity, aIndex) => ({
+            activities: (movement.activities || []).map((activity: any, aIndex: number) => ({
               id: activity.id || generateActivityId(day.day || (index + 1), aIndex),
               name: activity.name || activity.description?.split('.')[0] || '',
               description: activity.description || '',
@@ -377,16 +377,16 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
         }));
       } else {
         console.log('⚠️ Using legacy format, converting...');
-        formattedPlan = (Array.isArray(aiResponse) ? aiResponse : []).map((day, index) => ({
+        formattedPlan = (Array.isArray(aiResponse) ? aiResponse : []).map((day: any, index: number) => ({
           id: Date.now() + index,
           day: day.day || (index + 1),
           date: formatDateForDay(day.day || (index + 1), tripData.startDate),
-          movements: (day.movements || []).map((movement, mIndex) => ({
+          movements: (day.movements || []).map((movement: any, mIndex: number) => ({
             id: Date.now() + index * 1000 + mIndex,
             from: movement.from || '',
             to: movement.to || '',
             transport: movement.transport || '',
-            activities: (movement.activities || []).map((activity, aIndex) => {
+            activities: (movement.activities || []).map((activity: any, aIndex: number) => {
               const typeInfo = getActivityTypeInfoDetailed(activity.description || '');
               return {
                 id: generateActivityId(day.day || (index + 1), aIndex),
@@ -430,8 +430,8 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  const addMovement = (dayId) => {
-    setTravelPlan(travelPlan.map(day => 
+  const addMovement = (dayId: number) => {
+    setTravelPlan(travelPlan.map((day: any) => 
       day.id === dayId 
         ? {
             ...day, 
@@ -447,12 +447,12 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  const addActivity = (dayId, movementId) => {
-    setTravelPlan(travelPlan.map(day => 
+  const addActivity = (dayId: number, movementId: number) => {
+    setTravelPlan(travelPlan.map((day: any) => 
       day.id === dayId 
         ? {
             ...day,
-            movements: day.movements.map((movement) =>
+            movements: day.movements.map((movement: any) =>
               movement.id === movementId
                 ? {
                     ...movement,
@@ -478,16 +478,16 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  const removeActivity = (dayId, movementId, activityId) => {
-    setTravelPlan(travelPlan.map(day => 
+  const removeActivity = (dayId: number, movementId: number, activityId: number) => {
+    setTravelPlan(travelPlan.map((day: any) => 
       day.id === dayId 
         ? {
             ...day,
-            movements: day.movements.map((movement) =>
+            movements: day.movements.map((movement: any) =>
               movement.id === movementId
                 ? {
                     ...movement,
-                    activities: movement.activities.filter((activity) => activity.id !== activityId)
+                    activities: movement.activities.filter((activity: any) => activity.id !== activityId)
                   }
                 : movement
             )
@@ -497,12 +497,12 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  const updateMovement = (dayId, movementId, field, value) => {
-    setTravelPlan(travelPlan.map(day => 
+  const updateMovement = (dayId: number, movementId: number, field: string, value: string) => {
+    setTravelPlan(travelPlan.map((day: any) => 
       day.id === dayId 
         ? {
             ...day,
-            movements: day.movements.map((movement) =>
+            movements: day.movements.map((movement: any) =>
               movement.id === movementId
                 ? { ...movement, [field]: value }
                 : movement
@@ -514,16 +514,16 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
   };
 
   // Enhanced activity update with type detection
-  const updateActivity = (dayId, movementId, activityId, field, value) => {
-    setTravelPlan(travelPlan.map(day => 
+  const updateActivity = (dayId: number, movementId: number, activityId: number, field: string, value: string) => {
+    setTravelPlan(travelPlan.map((day: any) => 
       day.id === dayId 
         ? {
             ...day,
-            movements: day.movements.map((movement) =>
+            movements: day.movements.map((movement: any) =>
               movement.id === movementId
                 ? {
                     ...movement,
-                    activities: movement.activities.map((activity) => {
+                    activities: movement.activities.map((activity: any) => {
                       if (activity.id === activityId) {
                         const updatedActivity = { ...activity, [field]: value };
                         
@@ -596,16 +596,16 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
         processedPlan = processedResponse;
       }
       
-      const formattedPlan = processedPlan.map((day, index) => ({
+      const formattedPlan = processedPlan.map((day: any, index: number) => ({
         id: day.id || Date.now() + index,
         day: day.day,
         date: day.date || formatDateForDay(day.day, tripData.startDate),
-        movements: (day.movements || []).map((movement, mIndex) => ({
+        movements: (day.movements || []).map((movement: any, mIndex: number) => ({
           id: movement.id || Date.now() + index * 1000 + mIndex,
           from: movement.from,
           to: movement.to,
           transport: movement.transport || '',
-          activities: (movement.activities || []).map((activity, aIndex) => ({
+          activities: (movement.activities || []).map((activity: any, aIndex: number) => ({
             id: activity.id || generateActivityId(day.day, aIndex),
             name: activity.name || activity.description?.split('.')[0] || '',
             description: activity.description,
@@ -1049,7 +1049,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                 
                 {/* Render attività per questo giorno */}
                 {day.movements.map((movement) => 
-                  movement.activities.map((activity, activityIndex) => {
+                  movement.activities.map((activity: any, activityIndex: number) => {
                     const typeInfo = getActivityTypeInfo(activity.type);
                     
                     return (
