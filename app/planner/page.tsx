@@ -195,7 +195,7 @@ const TravelPlanner = () => {
       const dayDate = new Date(start);
       dayDate.setDate(start.getDate() + (dayNumber - 1));
       
-      const options = { 
+      const options: Intl.DateTimeFormatOptions = { 
         weekday: 'short', 
         day: 'numeric', 
         month: 'short' 
