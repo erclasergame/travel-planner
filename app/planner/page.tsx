@@ -75,7 +75,7 @@ const TravelPlanner = () => {
       activity: { color: '#14b8a6', icon: '🎯', label: 'ATTIVITÀ' },
       freetime: { color: '#9ca3af', icon: '🕐', label: 'LIBERO' }
     };
-    return typeMap[type] || typeMap.activity;
+    return typeMap[type as keyof typeof typeMap] || typeMap.activity;
   };
 
   const formatDuration = (time) => {
