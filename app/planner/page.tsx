@@ -1256,14 +1256,14 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                               value={activity.name || ''} 
                               onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'name', e.target.value)}
                               className={`w-full font-semibold text-lg bg-white border rounded-lg px-4 py-2 focus:ring-2`}
-                              style={{ borderColor: typeInfo.color, focusRingColor: typeInfo.color }}
+                              style={{ borderColor: typeInfo.color }}
                               placeholder="Nome attività"
                             />
                             <textarea 
                               value={activity.description || ''} 
                               onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'description', e.target.value)}
                               className={`w-full bg-white border rounded-lg px-4 py-2 text-sm focus:ring-2 h-16 resize-none`}
-                              style={{ borderColor: typeInfo.color, focusRingColor: typeInfo.color }}
+                              style={{ borderColor: typeInfo.color }}
                               placeholder="Descrizione"
                             />
                             
