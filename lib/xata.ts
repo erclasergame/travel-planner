@@ -1,220 +1,230 @@
-// API Cerca Attrazioni nel Database - Versione Corretta
-// File: app/api/database/attractions/route.ts
+// Xata Database - Solo HTTP Calls
+// File: lib/xata.ts
 
-import { NextRequest, NextResponse } from 'next/server';
-import { XataHelper, Attraction, City } from '@/lib/xata';
-
-// GET - Cerca attrazioni per città
-export async function GET(request: NextRequest) {
-  try {
-    const url = new URL(request.url);
-    const city = url.searchParams.get('city');
-    const type = url.searchParams.get('type');
-    const minCount = parseInt(url.searchParams.get('minCount') || '0');
-
-    if (!city) {
-      return NextResponse.json({
-        success: false,
-        error: 'Parameter "city" is required'
-      }, { status: 400 });
-    }
-
-    console.log(`🔍 Searching attractions for city: ${city}, type: ${type || 'all'}`);
-
-    // Debug URL construction
-    console.log('Database URL:', process.env.XATA_DATABASE_URL);
-    console.log('API Key configured:', !!process.env.XATA_API_KEY);
-    
-    // Cerca città nel database
-    const foundCity = await XataHelper.findCityByName(city);
-    
-    if (!foundCity) {
-      console.log(`❌ City "${city}" not found in database`);
-      return NextResponse.json({
-        success: false,
-        found: false,
-        city: city,
-        message: `City "${city}" not found in database`,
-        attractions: [],
-        suggestions: {
-          useAI: true,
-          reason: 'city_not_in_database'
-        }
-      });
-    }
-
-    // Cerca attrazioni per la città
-    const attractions = await XataHelper.getAttractionsByCity(foundCity.id);
-    const events = await XataHelper.getEventsByCity(foundCity.id);
-
-    console.log(`✅ Found ${attractions.length} attractions and ${events.length} events for ${city}`);
-
-    // Controlla se abbiamo abbastanza contenuto
-    const totalContent = attractions.length + events.length;
-    const hasEnoughContent = totalContent >= minCount;
-
-    return NextResponse.json({
-      success: true,
-      found: true,
-      city: {
-        id: foundCity.id,
-        name: foundCity.name,
-        coordinates: [foundCity.lat, foundCity.lng],
-        type: foundCity.type
-      },
-      attractions: attractions.map(attraction => ({
-        id: attraction.id,
-        name: attraction.name,
-        description: attraction.description,
-        type: attraction.type,
-        subtype: attraction.subtype,
-        coordinates: [attraction.lat, attraction.lng],
-        duration: attraction.visit_duration,
-        cost: attraction.cost_range,
-        image_url: attraction.image_url,
-        verified: !!attraction.xata?.createdAt
-      })),
-      events: events.map(event => ({
-        id: event.id,
-        name: event.name,
-        description: event.description,
-        season: event.season,
-        duration: event.duration,
-        cost: event.cost_range,
-        recurrence: event.recurrence_rule
-      })),
-      stats: {
-        attractions_count: attractions.length,
-        events_count: events.length,
-        total_content: totalContent,
-        has_enough_content: hasEnoughContent,
-        min_required: minCount
-      },
-      suggestions: {
-        useAI: !hasEnoughContent,
-        reason: hasEnoughContent ? 'sufficient_content' : 'insufficient_content',
-        recommendation: hasEnoughContent 
-          ? 'Use database content for itinerary' 
-          : 'Supplement with AI search'
-      },
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error: unknown) {
-    console.error('❌ Error searching attractions:', error);
-    
-    const err = error as Error;
-    
-    return NextResponse.json({
-      success: false,
-      error: 'Database search failed',
-      details: err.message,
-      timestamp: new Date().toISOString()
-    }, { status: 500 });
-  }
+// Interfacce TypeScript semplificate
+export interface Continent {
+  id: string;
+  name: string;
+  code: string;
+  xata?: any;
 }
 
-// POST - Salva nuove attrazioni trovate dall'AI  
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { city, attractions, source = 'ai_discovery' } = body;
+export interface Country {
+  id: string;
+  continent_id: string;
+  name: string;
+  code: string;
+  flag_url?: string;
+  xata?: any;
+}
 
-    if (!city || !attractions || !Array.isArray(attractions)) {
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid request body. Expected: { city: string, attractions: Attraction[] }'
-      }, { status: 400 });
-    }
+export interface Region {
+  id: string;
+  country_id: string;
+  name: string;
+  type: string;
+  xata?: any;
+}
 
-    console.log(`💾 Saving ${attractions.length} attractions for ${city}`);
+export interface City {
+  id: string;
+  region_id: string;
+  name: string;
+  type: string;
+  lat: number;
+  lng: number;
+  population?: number;
+  xata?: any;
+}
 
-    // Cerca città
-    let foundCity = await XataHelper.findCityByName(city);
-    
-    if (!foundCity) {
-      console.log(`❌ City "${city}" not found. Cannot save attractions without city record.`);
-      return NextResponse.json({
-        success: false,
-        error: `City "${city}" not found in database. Please add city first.`,
-        saved: [],
-        skipped: attractions.length
-      }, { status: 400 });
-    }
+export interface Attraction {
+  id: string;
+  city_id: string;
+  name: string;
+  description: string;
+  type: string;
+  subtype?: string;
+  lat: number;
+  lng: number;
+  visit_duration?: string;
+  cost_range?: string;
+  image_url?: string;
+  image_alt?: string;
+  is_active: boolean;
+  xata?: any;
+}
 
-    const savedAttractions = [];
-    const skippedAttractions = [];
+export interface Event {
+  id: string;
+  city_id: string;
+  name: string;
+  description: string;
+  recurrence_rule?: string;
+  season?: string;
+  duration?: string;
+  cost_range?: string;
+  image_url?: string;
+  image_alt?: string;
+  is_active: boolean;
+  xata?: any;
+}
 
-    for (const attraction of attractions) {
-      try {
-        // Per ora salviamo tutto, la verifica duplicati la facciamo dopo
-        const saved = await XataHelper.createRecord('attractions', {
-          city_id: foundCity.id,
-          name: attraction.name,
-          description: attraction.description || '',
-          type: attraction.type || 'attraction',
-          subtype: attraction.subtype,
-          lat: attraction.lat || foundCity.lat,
-          lng: attraction.lng || foundCity.lng,
-          visit_duration: attraction.duration,
-          cost_range: attraction.cost,
-          image_url: attraction.image_url,
-          image_alt: attraction.image_alt,
-          is_active: true
-        });
-
-        if (saved) {
-          savedAttractions.push({
-            id: saved.id,
-            name: saved.name,
-            type: saved.type
-          });
-          console.log(`✅ Saved attraction: ${attraction.name}`);
-        } else {
-          skippedAttractions.push({
-            name: attraction.name,
-            reason: 'save_failed'
-          });
-        }
-
-      } catch (error: unknown) {
-        console.error(`❌ Error saving attraction ${attraction.name}:`, error);
-        skippedAttractions.push({
-          name: attraction.name,
-          reason: 'error',
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
+// Funzioni helper pure HTTP - EXPORT OBBLIGATORIO
+export class XataHelper {
+  
+  // Test connessione base
+  static async testConnection(): Promise<boolean> {
+    try {
+      if (!process.env.XATA_DATABASE_URL || !process.env.XATA_API_KEY) {
+        return false;
       }
+
+      const response = await fetch(`${process.env.XATA_DATABASE_URL}/tables/continents/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          page: { size: 1 }
+        })
+      });
+      
+      return response.ok;
+    } catch (error) {
+      console.error('Xata connection test failed:', error);
+      return false;
     }
+  }
 
-    return NextResponse.json({
-      success: true,
-      message: `Processed ${attractions.length} attractions for ${city}`,
-      city: {
-        id: foundCity.id,
-        name: foundCity.name
-      },
-      results: {
-        total_processed: attractions.length,
-        saved_count: savedAttractions.length,
-        skipped_count: skippedAttractions.length,
-        saved: savedAttractions,
-        skipped: skippedAttractions
-      },
-      source,
-      timestamp: new Date().toISOString()
-    });
+  // Conta records in una tabella
+  static async countRecords(tableName: string): Promise<number> {
+    try {
+      const response = await fetch(`${process.env.XATA_DATABASE_URL}/tables/${tableName}/summarize`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          summaries: {
+            totalCount: { count: "*" }
+          }
+        })
+      });
+      
+      if (!response.ok) return 0;
+      
+      const data = await response.json();
+      return data.summaries?.[0]?.totalCount || 0;
+    } catch (error) {
+      console.error(`Error counting ${tableName}:`, error);
+      return 0;
+    }
+  }
 
-  } catch (error: unknown) {
-    console.error('❌ Error saving attractions:', error);
-    
-    const err = error as Error;
-    
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to save attractions',
-      details: err.message,
-      timestamp: new Date().toISOString()
-    }, { status: 500 });
+  // Cerca città per nome
+  static async findCityByName(cityName: string): Promise<City | null> {
+    try {
+      const response = await fetch(`${process.env.XATA_DATABASE_URL}/tables/cities/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filter: {
+            name: { $iContains: cityName }
+          },
+          page: { size: 1 }
+        })
+      });
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      return data.records?.[0] || null;
+    } catch (error) {
+      console.error('Error finding city:', error);
+      return null;
+    }
+  }
+
+  // Ottieni attrazioni per città
+  static async getAttractionsByCity(cityId: string): Promise<Attraction[]> {
+    try {
+      const response = await fetch(`${process.env.XATA_DATABASE_URL}/tables/attractions/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filter: {
+            city_id: cityId,
+            is_active: true
+          }
+        })
+      });
+      
+      if (!response.ok) return [];
+      
+      const data = await response.json();
+      return data.records || [];
+    } catch (error) {
+      console.error('Error getting attractions:', error);
+      return [];
+    }
+  }
+
+  // Ottieni eventi per città
+  static async getEventsByCity(cityId: string): Promise<Event[]> {
+    try {
+      const response = await fetch(`${process.env.XATA_DATABASE_URL}/tables/events/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filter: {
+            city_id: cityId,
+            is_active: true
+          }
+        })
+      });
+      
+      if (!response.ok) return [];
+      
+      const data = await response.json();
+      return data.records || [];
+    } catch (error) {
+      console.error('Error getting events:', error);
+      return [];
+    }
+  }
+
+  // Crea record in una tabella
+  static async createRecord(tableName: string, record: any): Promise<any> {
+    try {
+      const response = await fetch(`${process.env.XATA_DATABASE_URL}/tables/${tableName}/data`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(record)
+      });
+      
+      if (!response.ok) {
+        console.error(`Failed to create record in ${tableName}:`, response.status, await response.text());
+        return null;
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error(`Error creating record in ${tableName}:`, error);
+      return null;
+    }
   }
 }
