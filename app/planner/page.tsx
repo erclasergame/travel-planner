@@ -640,9 +640,11 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     URL.revokeObjectURL(url);
   };
 
+  };
+
   // ✅ RENDER FUNCTIONS
 
-  // SCREEN 1: Form iniziale (preserved from original)
+  // SCREEN 1: Form iniziale
   if (currentScreen === 'form') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
