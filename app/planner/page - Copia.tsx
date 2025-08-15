@@ -1,14 +1,14 @@
 /*
- * Travel Planner - Main Page with Timeline Layout
- * Version: 2.1.0 - Timeline Integration  
+ * Travel Planner - Main Page
+ * Version: 2.0.0
  * Last Modified: 2025-08-15
- * Changes: Integrated timeline layout from HTML prototype, keeping all existing logic
+ * Changes: Added startDate field, improved form structure, enhanced activity management
  */
 
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Plus, MapPin, Clock, Users, Download, Sparkles, ArrowLeft, ChevronRight, Lightbulb, Edit3, Trash2, Utensils, Camera, Bed, Coffee, ShoppingBag, Music, MapIcon, Plane, Globe, ExternalLink, Calendar, Star, AlertCircle, Car, Zap } from 'lucide-react';
+import { Plus, MapPin, Clock, Users, Download, Sparkles, ArrowLeft, ChevronRight, Lightbulb, Edit3, Trash2, Utensils, Camera, Bed, Coffee, ShoppingBag, Music, MapIcon, Plane, Globe, ExternalLink, Calendar, Star, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { convertTravelPlannerToViewer } from '@/utils/itineraryConverter';
 import { saveConvertedItinerary } from '@/utils/storageManager';
@@ -16,30 +16,32 @@ import { saveConvertedItinerary } from '@/utils/storageManager';
 const TravelPlanner = () => {
   const router = useRouter();
   
-  // ✅ All existing state management (preserved from original)
-  const [currentScreen, setCurrentScreen] = useState('form');
+  // ✅ NUOVO v2.0: Struttura tripData aggiornata
+  const [currentScreen, setCurrentScreen] = useState('form'); // 'form' o 'editor'
   const [tripData, setTripData] = useState({
     from: '',
     to: '',
     duration: '',
     people: '',
     description: '',
-    startDate: ''
+    startDate: '' // ✅ NUOVO CAMPO
   });
-  const [travelPlan, setTravelPlan] = useState([]);
+  const [travelPlan, setTravelPlan] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [convertingToViewer, setConvertingToViewer] = useState(false);
   
   // Modello globale dal server
-  const [selectedModel, setSelectedModel] = useState(null);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   
   // Tracking modifiche utente
   const [userHasModified, setUserHasModified] = useState(false);
-  const [lastAIVersion, setLastAIVersion] = useState(null);
-  const [itineraryMetadata, setItineraryMetadata] = useState(null);
+  const [lastAIVersion, setLastAIVersion] = useState<string | null>(null);
 
-  // ✅ Carica modello globale dal server (preserved)
+  // ✅ NUOVO v2.0: Enhanced metadata tracking
+  const [itineraryMetadata, setItineraryMetadata] = useState<any>(null);
+
+  // Carica modello globale dal server
   useEffect(() => {
     const loadGlobalModel = async () => {
       try {
@@ -64,49 +66,11 @@ const TravelPlanner = () => {
     loadGlobalModel();
   }, []);
 
-  // ✅ Utility functions for timeline layout  
-  const getActivityTypeInfo = (type) => {
-    const typeMap = {
-      travel: { color: '#10b981', icon: '✈️', label: 'TRAVEL' },
-      accommodation: { color: '#8b5cf6', icon: '🏨', label: 'HOTEL' },
-      attraction: { color: '#3b82f6', icon: '📷', label: 'ATTRAZIONE' },
-      meal: { color: '#ef4444', icon: '🍽️', label: 'PASTO' },
-      shopping: { color: '#f59e0b', icon: '🛍️', label: 'SHOPPING' },
-      activity: { color: '#14b8a6', icon: '🎯', label: 'ATTIVITÀ' },
-      freetime: { color: '#9ca3af', icon: '🕐', label: 'LIBERO' }
-    };
-    return typeMap[type] || typeMap.activity;
-  };
-
-  const formatDuration = (time) => {
-    if (!time || !time.includes('-')) return '';
-    const [start, end] = time.split('-');
-    if (!start || !end) return '';
+  // ✅ NUOVO v2.0: Enhanced activity type detection
+  const getActivityTypeInfo = (description: string, existingType?: string) => {
+    const desc = description.toLowerCase();
     
-    try {
-      const startParts = start.split(':').map(Number);
-      const endParts = end.split(':').map(Number);
-      const startMinutes = startParts[0] * 60 + (startParts[1] || 0);
-      const endMinutes = endParts[0] * 60 + (endParts[1] || 0);
-      const diffMinutes = endMinutes - startMinutes;
-      
-      if (diffMinutes > 0) {
-        const hours = Math.floor(diffMinutes / 60);
-        const minutes = diffMinutes % 60;
-        return hours > 0 ? (minutes > 0 ? `(${hours}h${minutes}m)` : `(${hours}h)`) : `(${minutes}m)`;
-      }
-    } catch (error) {
-      return '';
-    }
-    return '';
-  };
-
-  // ✅ ALL EXISTING FUNCTIONS (preserved from original file)
-  
-  // Enhanced activity type detection
-  const getActivityTypeInfo = (description, existingType) => {
-    const desc = description?.toLowerCase() || '';
-    
+    // Use existing type if provided
     if (existingType) {
       return {
         type: existingType,
@@ -115,7 +79,8 @@ const TravelPlanner = () => {
       };
     }
     
-    let type = 'activity';
+    // Auto-detect type
+    let type = 'activity'; // default
     
     if (desc.includes('pranzo') || desc.includes('cena') || desc.includes('colazione') || 
         desc.includes('ristorante') || desc.includes('trattoria') || desc.includes('osteria') || 
@@ -144,8 +109,8 @@ const TravelPlanner = () => {
     };
   };
 
-  // Enhanced icon system
-  const getActivityIcon = (type, subtype) => {
+  // ✅ NUOVO v2.0: Enhanced icon system
+  const getActivityIcon = (type: string, subtype?: string) => {
     switch (type) {
       case 'meal':
         if (subtype === 'breakfast') return <Coffee className="h-4 w-4 text-amber-600" />;
@@ -168,26 +133,26 @@ const TravelPlanner = () => {
     }
   };
 
-  // Activity colors
-  const getActivityColor = (type) => {
+  // ✅ NUOVO v2.0: Activity colors
+  const getActivityColor = (type: string) => {
     switch (type) {
-      case 'meal': return '#f97316';
-      case 'accommodation': return '#8b5cf6';
-      case 'attraction': return '#3b82f6';
-      case 'shopping': return '#10b981';
-      case 'travel': return '#6b7280';
-      case 'activity': return '#14b8a6';
+      case 'meal': return '#f97316'; // orange
+      case 'accommodation': return '#8b5cf6'; // purple
+      case 'attraction': return '#3b82f6'; // blue
+      case 'shopping': return '#10b981'; // green
+      case 'travel': return '#6b7280'; // gray
+      case 'activity': return '#14b8a6'; // teal
       default: return '#3b82f6';
     }
   };
 
-  // Generate activity ID
-  const generateActivityId = (dayNumber, activityIndex) => {
+  // ✅ NUOVO v2.0: Generate activity ID
+  const generateActivityId = (dayNumber: number, activityIndex: number) => {
     return `day${dayNumber}-${activityIndex + 1}`;
   };
 
-  // Format date for display
-  const formatDateForDay = (dayNumber, startDate) => {
+  // ✅ NUOVO v2.0: Format date for display
+  const formatDateForDay = (dayNumber: number, startDate?: string) => {
     if (!startDate) {
       return `Day ${dayNumber}`;
     }
@@ -197,7 +162,7 @@ const TravelPlanner = () => {
       const dayDate = new Date(start);
       dayDate.setDate(start.getDate() + (dayNumber - 1));
       
-      const options = { 
+      const options: Intl.DateTimeFormatOptions = { 
         weekday: 'short', 
         day: 'numeric', 
         month: 'short' 
@@ -224,7 +189,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
   };
 
   // Salva snapshot per tracciare modifiche
-  const saveAISnapshot = (plan) => {
+  const saveAISnapshot = (plan: any[]) => {
     setLastAIVersion(JSON.stringify(plan));
     setUserHasModified(false);
   };
@@ -242,7 +207,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     }
   }, [travelPlan, lastAIVersion]);
 
-  // Enhanced createWebPage with metadata
+  // ✅ NUOVO v2.0: Enhanced createWebPage with metadata
   const createWebPage = async () => {
     if (!travelPlan || travelPlan.length === 0) {
       alert('⚠️ Nessun itinerario da convertire. Genera prima un itinerario.');
@@ -251,8 +216,9 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
 
     setConvertingToViewer(true);
     try {
-      console.log('📄 Iniziando conversione locale per viewer...');
+      console.log('🔄 Iniziando conversione locale per viewer...');
 
+      // ✅ NUOVO v2.0: Enhanced data structure
       const originalItinerary = {
         tripInfo: tripData,
         itinerary: travelPlan,
@@ -271,12 +237,12 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
         hasMetadata: !!itineraryMetadata
       });
 
-      const convertedItinerary = convertTravelPlannerToViewer(originalItinerary);
+      const convertedItinerary = convertTravelPlannerToViewer(originalItinerary) as any;
 
       console.log('✅ Conversione completata:', {
         title: convertedItinerary.metadata.title,
         days: convertedItinerary.days.length,
-        totalActivities: convertedItinerary.days.reduce((sum, day) => sum + day.activities.length, 0)
+        totalActivities: convertedItinerary.days.reduce((sum: number, day: any) => sum + day.activities.length, 0)
       });
 
       const saved = saveConvertedItinerary(convertedItinerary, originalItinerary);
@@ -285,7 +251,19 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
         console.warn('⚠️ Impossibile salvare in sessionStorage, procedo comunque');
       }
 
-  // Enhanced AI generation with new format
+      console.log('🚀 Reindirizzando a viewer/result...');
+      router.push('/viewer/result');
+
+    } catch (error: unknown) {
+      console.error('❌ Errore conversione locale:', error);
+      const err = error as Error;
+      alert(`Errore durante la conversione: ${err.message}`);
+    } finally {
+      setConvertingToViewer(false);
+    }
+  };
+
+  // ✅ MIGLIORATO v2.0: Enhanced AI generation with new format
   const generateAIPlan = async () => {
     if (!selectedModel) {
       alert('⚠️ Nessun modello AI configurato. Contatta l\'amministratore.');
@@ -306,7 +284,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           tripData,
           action: 'generate',
           selectedModel: selectedModel,
-          formatVersion: '2.0'
+          formatVersion: '2.0' // ✅ NUOVO: Version flag
         })
       });
 
@@ -320,8 +298,9 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       let data;
       try {
         data = JSON.parse(responseText);
-      } catch (parseError) {
-        throw new Error(`Errore parsing JSON: ${parseError.message}. Response: ${responseText}`);
+      } catch (parseError: unknown) {
+        const err = parseError as Error;
+        throw new Error(`Errore parsing JSON: ${err.message}. Response: ${responseText}`);
       }
       
       if (data.error) {
@@ -331,35 +310,37 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       let aiResponse;
       try {
         aiResponse = JSON.parse(data.content);
-      } catch (contentParseError) {
-        throw new Error(`Errore parsing contenuto AI: ${contentParseError.message}. Content: ${data.content}`);
+      } catch (contentParseError: unknown) {
+        const err = contentParseError as Error;
+        throw new Error(`Errore parsing contenuto AI: ${err.message}. Content: ${data.content}`);
       }
       
-      // Handle new format with metadata
+      // ✅ NUOVO v2.0: Handle new format with metadata
       let formattedPlan;
       let metadata = null;
       
       if (aiResponse.metadata && aiResponse.itinerary) {
+        // New format v2.0
         console.log('✅ Detected new format v2.0 with metadata');
         metadata = aiResponse.metadata;
-        formattedPlan = aiResponse.itinerary.map((day, index) => ({
+        formattedPlan = aiResponse.itinerary.map((day: any, index: number) => ({
           id: Date.now() + index,
           day: day.day || (index + 1),
-          date: formatDateForDay(day.day || (index + 1), tripData.startDate),
-          movements: (day.movements || []).map((movement, mIndex) => ({
+          date: formatDateForDay(day.day || (index + 1), tripData.startDate), // ✅ NUOVO
+          movements: (day.movements || []).map((movement: any, mIndex: number) => ({
             id: Date.now() + index * 1000 + mIndex,
             from: movement.from || '',
             to: movement.to || '',
             transport: movement.transport || '',
-            activities: (movement.activities || []).map((activity, aIndex) => ({
-              id: activity.id || generateActivityId(day.day || (index + 1), aIndex),
-              name: activity.name || activity.description?.split('.')[0] || '',
+            activities: (movement.activities || []).map((activity: any, aIndex: number) => ({
+              id: activity.id || generateActivityId(day.day || (index + 1), aIndex), // ✅ NUOVO
+              name: activity.name || activity.description?.split('.')[0] || '', // ✅ NUOVO
               description: activity.description || '',
               time: activity.time || '',
-              duration: activity.duration || '',
-              type: activity.type || 'activity',
-              subtype: activity.subtype || null,
-              required: activity.required || false,
+              duration: activity.duration || '', // ✅ NUOVO
+              type: activity.type || 'activity', // ✅ NUOVO
+              subtype: activity.subtype || null, // ✅ NUOVO
+              required: activity.required || false, // ✅ NUOVO
               cost: activity.cost || '',
               alternatives: activity.alternatives || [],
               notes: activity.notes || ''
@@ -367,27 +348,28 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           }))
         }));
       } else {
+        // Old format - convert to new structure
         console.log('⚠️ Using legacy format, converting...');
-        formattedPlan = (Array.isArray(aiResponse) ? aiResponse : []).map((day, index) => ({
+        formattedPlan = (Array.isArray(aiResponse) ? aiResponse : []).map((day: any, index: number) => ({
           id: Date.now() + index,
           day: day.day || (index + 1),
-          date: formatDateForDay(day.day || (index + 1), tripData.startDate),
-          movements: (day.movements || []).map((movement, mIndex) => ({
+          date: formatDateForDay(day.day || (index + 1), tripData.startDate), // ✅ NUOVO
+          movements: (day.movements || []).map((movement: any, mIndex: number) => ({
             id: Date.now() + index * 1000 + mIndex,
             from: movement.from || '',
             to: movement.to || '',
             transport: movement.transport || '',
-            activities: (movement.activities || []).map((activity, aIndex) => {
+            activities: (movement.activities || []).map((activity: any, aIndex: number) => {
               const typeInfo = getActivityTypeInfo(activity.description || '');
               return {
-                id: generateActivityId(day.day || (index + 1), aIndex),
-                name: activity.description?.split('.')[0]?.split(',')[0]?.trim() || '',
+                id: generateActivityId(day.day || (index + 1), aIndex), // ✅ NUOVO
+                name: activity.description?.split('.')[0]?.split(',')[0]?.trim() || '', // ✅ NUOVO
                 description: activity.description || '',
                 time: activity.time || '',
-                duration: activity.duration || '1h',
-                type: typeInfo.type,
-                subtype: null,
-                required: typeInfo.type === 'accommodation' || typeInfo.type === 'meal',
+                duration: activity.duration || '1h', // ✅ NUOVO: Default duration
+                type: typeInfo.type, // ✅ NUOVO
+                subtype: null, // ✅ NUOVO
+                required: typeInfo.type === 'accommodation' || typeInfo.type === 'meal', // ✅ NUOVO
                 cost: activity.cost || '',
                 alternatives: activity.alternatives || [],
                 notes: activity.notes || ''
@@ -398,30 +380,31 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       }
       
       setTravelPlan(formattedPlan);
-      setItineraryMetadata(metadata);
+      setItineraryMetadata(metadata); // ✅ NUOVO
       saveAISnapshot(formattedPlan);
       setCurrentScreen('editor');
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Errore nella generazione:', error);
-      alert(`Errore nella generazione del piano: ${error.message}`);
+      const err = error as Error;
+      alert(`Errore nella generazione del piano: ${err.message}`);
     }
     setLoading(false);
   };
 
-  // Gestione piano di viaggio
+  // Gestione piano di viaggio con tracking modifiche (invariato)
   const addDay = () => {
     const newDay = {
       id: Date.now(),
       day: travelPlan.length + 1,
-      date: formatDateForDay(travelPlan.length + 1, tripData.startDate),
+      date: formatDateForDay(travelPlan.length + 1, tripData.startDate), // ✅ NUOVO
       movements: []
     };
     setTravelPlan([...travelPlan, newDay]);
     setUserHasModified(true);
   };
 
-  const addMovement = (dayId) => {
+  const addMovement = (dayId: number) => {
     setTravelPlan(travelPlan.map(day => 
       day.id === dayId 
         ? {
@@ -438,24 +421,24 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  const addActivity = (dayId, movementId) => {
+  const addActivity = (dayId: number, movementId: number) => {
     setTravelPlan(travelPlan.map(day => 
       day.id === dayId 
         ? {
             ...day,
-            movements: day.movements.map((movement) =>
+            movements: day.movements.map((movement: any) =>
               movement.id === movementId
                 ? {
                     ...movement,
                     activities: [...movement.activities, {
                       id: Date.now(),
-                      name: '',
+                      name: '', // ✅ NUOVO
                       description: '',
                       time: '',
-                      duration: '1h',
-                      type: 'activity',
-                      subtype: null,
-                      required: false,
+                      duration: '1h', // ✅ NUOVO: Default duration
+                      type: 'activity', // ✅ NUOVO: Default type
+                      subtype: null, // ✅ NUOVO
+                      required: false, // ✅ NUOVO
                       cost: '',
                       alternatives: [],
                       notes: ''
@@ -469,16 +452,16 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  const removeActivity = (dayId, movementId, activityId) => {
+  const removeActivity = (dayId: number, movementId: number, activityId: number) => {
     setTravelPlan(travelPlan.map(day => 
       day.id === dayId 
         ? {
             ...day,
-            movements: day.movements.map((movement) =>
+            movements: day.movements.map((movement: any) =>
               movement.id === movementId
                 ? {
                     ...movement,
-                    activities: movement.activities.filter((activity) => activity.id !== activityId)
+                    activities: movement.activities.filter((activity: any) => activity.id !== activityId)
                   }
                 : movement
             )
@@ -488,12 +471,12 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  const updateMovement = (dayId, movementId, field, value) => {
+  const updateMovement = (dayId: number, movementId: number, field: string, value: string) => {
     setTravelPlan(travelPlan.map(day => 
       day.id === dayId 
         ? {
             ...day,
-            movements: day.movements.map((movement) =>
+            movements: day.movements.map((movement: any) =>
               movement.id === movementId
                 ? { ...movement, [field]: value }
                 : movement
@@ -504,21 +487,21 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  // Enhanced activity update with type detection
-  const updateActivity = (dayId, movementId, activityId, field, value) => {
+  // ✅ MIGLIORATO v2.0: Enhanced activity update with type detection
+  const updateActivity = (dayId: number, movementId: number, activityId: number, field: string, value: string) => {
     setTravelPlan(travelPlan.map(day => 
       day.id === dayId 
         ? {
             ...day,
-            movements: day.movements.map((movement) =>
+            movements: day.movements.map((movement: any) =>
               movement.id === movementId
                 ? {
                     ...movement,
-                    activities: movement.activities.map((activity) => {
+                    activities: movement.activities.map((activity: any) => {
                       if (activity.id === activityId) {
                         const updatedActivity = { ...activity, [field]: value };
                         
-                        // Auto-update type when description changes
+                        // ✅ NUOVO v2.0: Auto-update type when description changes
                         if (field === 'description' && value) {
                           const typeInfo = getActivityTypeInfo(value, activity.type);
                           updatedActivity.type = typeInfo.type;
@@ -542,7 +525,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     setUserHasModified(true);
   };
 
-  // Process plan
+  // Process plan (invariato)
   const processPlan = async () => {
     if (!selectedModel) {
       alert('⚠️ Nessun modello AI configurato. Contatta l\'amministratore.');
@@ -562,7 +545,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           travelPlan,
           action: 'process',
           selectedModel: selectedModel,
-          formatVersion: '2.0'
+          formatVersion: '2.0' // ✅ NUOVO
         })
       });
 
@@ -577,6 +560,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
 
       let processedResponse = JSON.parse(data.content);
       
+      // Handle both old and new format responses
       let processedPlan;
       if (processedResponse.itinerary) {
         processedPlan = processedResponse.itinerary;
@@ -587,16 +571,16 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
         processedPlan = processedResponse;
       }
       
-      const formattedPlan = processedPlan.map((day, index) => ({
+      const formattedPlan = processedPlan.map((day: any, index: number) => ({
         id: day.id || Date.now() + index,
         day: day.day,
-        date: day.date || formatDateForDay(day.day, tripData.startDate),
-        movements: (day.movements || []).map((movement, mIndex) => ({
+        date: day.date || formatDateForDay(day.day, tripData.startDate), // ✅ NUOVO
+        movements: (day.movements || []).map((movement: any, mIndex: number) => ({
           id: movement.id || Date.now() + index * 1000 + mIndex,
           from: movement.from,
           to: movement.to,
           transport: movement.transport || '',
-          activities: (movement.activities || []).map((activity, aIndex) => ({
+          activities: (movement.activities || []).map((activity: any, aIndex: number) => ({
             id: activity.id || generateActivityId(day.day, aIndex),
             name: activity.name || activity.description?.split('.')[0] || '',
             description: activity.description,
@@ -614,22 +598,23 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
       
       setTravelPlan(formattedPlan);
       saveAISnapshot(formattedPlan);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Errore nell\'elaborazione:', error);
-      alert(`Errore nell'elaborazione del piano: ${error.message}`);
+      const err = error as Error;
+      alert(`Errore nell'elaborazione del piano: ${err.message}`);
     }
     setLoading(false);
   };
 
-  // Export JSON
+  // Export JSON (invariato)
   const downloadJSON = () => {
     const dataStr = JSON.stringify({
       tripInfo: tripData,
       itinerary: travelPlan,
-      metadata: itineraryMetadata,
+      metadata: itineraryMetadata, // ✅ NUOVO
       aiModel: selectedModel,
       exportedAt: new Date().toISOString(),
-      version: '2.0'
+      version: '2.0' // ✅ NUOVO
     }, null, 2);
     const dataBlob = new Blob([dataStr], {type: 'application/json'});
     const url = URL.createObjectURL(dataBlob);
@@ -640,9 +625,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     URL.revokeObjectURL(url);
   };
 
-  // ✅ RENDER FUNCTIONS
-
-  // SCREEN 1: Form iniziale (preserved from original)
+  // ✅ SCREEN 1: Form iniziale con startDate
   if (currentScreen === 'form') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -651,7 +634,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
             <h1 className="text-4xl font-bold text-gray-800 mb-4">Travel Planner</h1>
             <p className="text-gray-600">Pianifica il tuo viaggio perfetto</p>
             <div className="text-xs text-gray-500 mt-2">
-              v2.1 Timeline • {isModelLoaded ? (
+              v2.0 • {isModelLoaded ? (
                 selectedModel ? (
                   <>AI: {selectedModel.split('/')[1]?.split('-')[0] || selectedModel.split('/')[0]}</>
                 ) : (
@@ -722,7 +705,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                 />
               </div>
 
-              {/* Campo Start Date */}
+              {/* ✅ NUOVO v2.0: Campo Start Date */}
               <div className="relative">
                 <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                 <input
@@ -783,10 +766,10 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
               )}
             </button>
             
-            {/* Enhanced debug info */}
+            {/* ✅ NUOVO v2.0: Enhanced debug info */}
             <div className="text-xs text-gray-400 text-center border-t pt-4">
               <p>Modello globale: <strong>{selectedModel || 'Non configurato'}</strong></p>
-              {selectedModel && <p className="text-green-600">✅ Sistema v2.1 Timeline configurato dall'amministratore</p>}
+              {selectedModel && <p className="text-green-600">✅ Sistema v2.0 configurato dall'amministratore</p>}
               {tripData.startDate && (
                 <p className="text-blue-600 mt-1">📅 Data inizio: {new Date(tripData.startDate).toLocaleDateString('it-IT')}</p>
               )}
@@ -798,137 +781,23 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-8 text-center">
               <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-600">Generando il tuo itinerario personalizzato v2.1...</p>
+              <p className="text-gray-600">Generando il tuo itinerario personalizzato v2.0...</p>
               <p className="text-xs text-gray-500 mt-2">Modello: {selectedModel}</p>
               {tripData.startDate && (
                 <p className="text-xs text-blue-600 mt-1">📅 Con date reali dal {new Date(tripData.startDate).toLocaleDateString('it-IT')}</p>
               )}
             </div>
           </div>
-  // SCREEN 2: Editor itinerario con Timeline Layout 
+        )}
+      </div>
+    );
+  }
+
+  // ✅ SCREEN 2: Editor itinerario migliorato
   if (currentScreen === 'editor') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <style jsx>{`
-          /* Timeline Layout Styles */
-          .activity-travel { background: rgba(16, 185, 129, 0.03); border: 2px solid #10b981; }
-          .activity-accommodation { background: rgba(139, 92, 246, 0.03); border: 2px solid #8b5cf6; }
-          .activity-attraction { background: rgba(59, 130, 246, 0.03); border: 2px solid #3b82f6; }
-          .activity-meal { background: rgba(239, 68, 68, 0.03); border: 2px solid #ef4444; }
-          .activity-shopping { background: rgba(245, 158, 11, 0.03); border: 2px solid #f59e0b; }
-          .activity-activity { background: rgba(20, 184, 166, 0.03); border: 2px solid #14b8a6; }
-          .activity-freetime { background: rgba(156, 163, 175, 0.03); border: 2px dashed #9ca3af; }
-          
-          .travel-section {
-            border-left: 3px solid #10b981;
-            background: rgba(16, 185, 129, 0.06);
-          }
-          
-          .required-badge {
-            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
-          }
-          
-          .info-balloon {
-            position: relative;
-            background: white;
-            border: 2px solid #3b82f6;
-            border-radius: 16px;
-            padding: 12px 16px;
-            font-size: 0.875rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            z-index: 10;
-            min-width: 200px;
-            cursor: pointer;
-          }
-          
-          .info-balloon.travel { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
-          .info-balloon.accommodation { border-color: #8b5cf6; background: rgba(139, 92, 246, 0.05); }
-          .info-balloon.attraction { border-color: #3b82f6; background: rgba(59, 130, 246, 0.05); }
-          .info-balloon.meal { border-color: #ef4444; background: rgba(239, 68, 68, 0.05); }
-          .info-balloon.freetime { border-color: #9ca3af; background: rgba(156, 163, 175, 0.05); }
-          
-          .info-balloon::after {
-            content: '';
-            position: absolute;
-            right: -12px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 0;
-            height: 0;
-            border-left: 12px solid;
-            border-left-color: inherit;
-            border-top: 8px solid transparent;
-            border-bottom: 8px solid transparent;
-          }
-          
-          .info-balloon.travel::after { border-left-color: #10b981; }
-          .info-balloon.accommodation::after { border-left-color: #8b5cf6; }
-          .info-balloon.attraction::after { border-left-color: #3b82f6; }
-          .info-balloon.meal::after { border-left-color: #ef4444; }
-          .info-balloon.freetime::after { border-left-color: #9ca3af; }
-          
-          .timeline-line {
-            position: absolute;
-            left: 15.5rem;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: linear-gradient(to bottom, #e5e7eb, #9ca3af, #e5e7eb);
-          }
-          
-          .timeline-dot {
-            position: absolute;
-            left: 15rem;
-            width: 12px;
-            height: 12px;
-            background: #3b82f6;
-            border: 3px solid white;
-            border-radius: 50%;
-            box-shadow: 0 0 0 2px #3b82f6;
-            z-index: 10;
-            top: 50%;
-            transform: translateY(-50%);
-          }
-          
-          .timeline-dot.travel { background: #10b981; box-shadow: 0 0 0 2px #10b981; }
-          .timeline-dot.accommodation { background: #8b5cf6; box-shadow: 0 0 0 2px #8b5cf6; }
-          .timeline-dot.attraction { background: #3b82f6; box-shadow: 0 0 0 2px #3b82f6; }
-          .timeline-dot.meal { background: #ef4444; box-shadow: 0 0 0 2px #ef4444; }
-          .timeline-dot.freetime { background: #9ca3af; box-shadow: 0 0 0 2px #9ca3af; }
-          
-          .connector-line {
-            position: absolute;
-            left: 16rem;
-            height: 2px;
-            background: #d1d5db;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 2rem;
-          }
-          
-          .editable {
-            background: transparent;
-            border: 1px dashed transparent;
-            padding: 2px 4px;
-            border-radius: 4px;
-            min-width: 60px;
-            display: inline-block;
-          }
-          
-          .editable:hover {
-            background: rgba(59, 130, 246, 0.1);
-            border-color: #3b82f6;
-          }
-          
-          .missing-data {
-            color: #9ca3af;
-            font-style: italic;
-            font-size: 0.75rem;
-          }
-        `}</style>
-
-        <div className="max-w-7xl mx-auto pt-8">
-          {/* Header */}
+        <div className="max-w-4xl mx-auto pt-8">
           <div className="flex justify-between items-center mb-8">
             <button
               onClick={() => setCurrentScreen('form')}
@@ -972,9 +841,9 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
               )}
             </div>
           </div>
-
-          {/* Trip Info */}
-          <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+          
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            {/* ✅ MIGLIORATO v2.0: Enhanced trip info */}
             <div className="border-b border-gray-200 pb-6 mb-6">
               <h3 className="text-xl font-bold text-gray-800 mb-3">Dettagli Viaggio</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -995,6 +864,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                   <p className="font-semibold">{tripData.people}</p>
                 </div>
               </div>
+              {/* ✅ NUOVO v2.0: Show start date and metadata info */}
               {tripData.startDate && (
                 <div className="mt-3 text-sm">
                   <span className="text-gray-600">Data inizio:</span>
@@ -1009,226 +879,287 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                 </div>
               )}
               <div className="text-xs text-gray-500 mt-3 flex items-center justify-between">
-                <span>Generato con: {selectedModel} (modello globale v2.1 Timeline)</span>
+                <span>Generato con: {selectedModel} (modello globale v2.0)</span>
                 {itineraryMetadata && (
                   <span className="text-green-600">✅ Enhanced format</span>
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Timeline Layout per ogni giorno */}
-          {travelPlan.map((day) => (
-            <div key={day.id} className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <h1 className="text-3xl font-bold text-gray-800">
-                  {day.date || formatDateForDay(day.day, tripData.startDate)}
-                </h1>
-                <button
-                  onClick={() => addMovement(day.id)}
-                  className="flex items-center text-blue-600 hover:text-blue-800"
-                >
-                  <Plus className="h-5 w-5 mr-1" />
-                  Aggiungi Spostamento
-                </button>
-              </div>
-              
-              <div className="relative">
-                {/* Timeline line */}
-                <div className="timeline-line"></div>
-                
-                {/* Render attività per questo giorno */}
-                {day.movements.map((movement) => 
-                  movement.activities.map((activity, activityIndex) => {
-                    const typeInfo = getActivityTypeInfo(activity.type);
-                    
-                    return (
-                      <div key={activity.id} className="flex items-center mb-8 relative">
-                        {/* Info Balloon */}
-                        <div className={`info-balloon ${activity.type}`}>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <span className="text-xl">{typeInfo.icon}</span>
-                            <span className="font-semibold" style={{color: typeInfo.color}}>
-                              {typeInfo.label}
-                            </span>
+            <div className="space-y-6">
+              {travelPlan.map((day: any) => (
+                <div key={day.id} className="border border-gray-200 rounded-xl p-6 bg-gray-50">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center">
+                      <span className="bg-blue-100 text-blue-800 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold mr-3">
+                        {day.day}
+                      </span>
+                      {/* ✅ NUOVO v2.0: Show formatted date */}
+                      {day.date || formatDateForDay(day.day, tripData.startDate)}
+                    </h3>
+                    <button
+                      onClick={() => addMovement(day.id)}
+                      className="flex items-center text-blue-600 hover:text-blue-800"
+                    >
+                      <Plus className="h-5 w-5 mr-1" />
+                      Spostamento
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {day.movements.map((movement: any, mIndex: number) => (
+                      <div key={movement.id} className="border-l-4 border-blue-300 pl-4 bg-white rounded-lg p-4">
+                        <div className="grid grid-cols-2 gap-4 mb-3">
+                          <input
+                            type="text"
+                            placeholder="Da dove"
+                            value={movement.from}
+                            onChange={(e) => updateMovement(day.id, movement.id, 'from', e.target.value)}
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                            style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
+                          />
+                          <input
+                            type="text"
+                            placeholder="A dove"
+                            value={movement.to}
+                            onChange={(e) => updateMovement(day.id, movement.id, 'to', e.target.value)}
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                            style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
+                          />
+                        </div>
+                        
+                        {movement.transport && (
+                          <div className="mb-3">
+                            <input
+                              type="text"
+                              placeholder="Trasporto"
+                              value={movement.transport}
+                              onChange={(e) => updateMovement(day.id, movement.id, 'transport', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                              style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
+                            />
                           </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center space-x-2">
-                              <span>🕐</span>
-                              <input
-                                type="text"
-                                value={activity.time?.split('-')[0] || ''}
-                                onChange={(e) => {
-                                  const endTime = activity.time?.split('-')[1] || '';
-                                  const newTime = endTime ? `${e.target.value}-${endTime}` : e.target.value;
-                                  updateActivity(day.id, movement.id, activity.id, 'time', newTime);
-                                }}
-                                className="editable font-medium bg-transparent border-none p-0 text-sm w-16"
-                                placeholder="09:00"
-                              />
-                              <span>-</span>
-                              <input
-                                type="text"
-                                value={activity.time?.split('-')[1] || ''}
-                                onChange={(e) => {
-                                  const startTime = activity.time?.split('-')[0] || '';
-                                  const newTime = startTime ? `${startTime}-${e.target.value}` : e.target.value;
-                                  updateActivity(day.id, movement.id, activity.id, 'time', newTime);
-                                }}
-                                className="editable font-medium bg-transparent border-none p-0 text-sm w-16"
-                                placeholder="11:00"
-                              />
-                              <span className="text-gray-600 text-xs">{formatDuration(activity.time)}</span>
-                            </div>
-                            <div className="text-xs space-y-1">
-                              {movement.transport && (
-                                <div className="flex items-center space-x-1">
-                                  <span>🚗</span>
-                                  <span className="text-green-700">{movement.transport}</span>
+                        )}
+                        
+                        <div className="space-y-3">
+                          {movement.activities.map((activity: any) => (
+                            <div key={activity.id} className="bg-gray-200 border-2 border-gray-400 rounded-lg p-4 space-y-3 shadow-sm activity-container">
+                              
+                              {/* ✅ NUOVO v2.0: Enhanced activity header with type info */}
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center space-x-2">
+                                  {getActivityIcon(activity.type, activity.subtype)}
+                                  <span className="text-xs font-medium text-gray-600 capitalize">
+                                    {activity.type}
+                                    {activity.subtype && ` • ${activity.subtype}`}
+                                  </span>
+                                  {activity.required && (
+                                    <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full flex items-center">
+                                      <Star className="h-3 w-3 mr-1" />
+                                      Richiesto
+                                    </span>
+                                  )}
                                 </div>
-                              )}
-                              <div className="flex items-center space-x-1">
-                                <span>💰</span>
+                                <button
+                                  onClick={() => removeActivity(day.id, movement.id, activity.id)}
+                                  className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+
+                              {/* ✅ NUOVO v2.0: Name and description fields */}
+                              <div className="space-y-3">
                                 <input
                                   type="text"
-                                  value={activity.cost || ''}
-                                  onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'cost', e.target.value)}
-                                  className="editable bg-transparent border-none p-0 text-xs w-20"
-                                  placeholder="€20-30"
+                                  placeholder="Nome attività"
+                                  value={activity.name || ''}
+                                  onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'name', e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white font-medium"
+                                  style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
+                                />
+                                
+                                <textarea
+                                  placeholder="Descrizione dettagliata"
+                                  value={activity.description}
+                                  onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'description', e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white h-20 resize-none text-sm"
+                                  style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
                                 />
                               </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Timeline dot */}
-                        <div className={`timeline-dot ${activity.type}`}></div>
-                        
-                        {/* Connector line */}
-                        <div className="connector-line"></div>
-                        
-                        {/* Activity Card */}
-                        <div className={`activity-${activity.type} rounded-2xl p-6 flex-1 shadow-lg ml-8`}>
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center space-x-3">
-                              {activity.required && (
-                                <span className="required-badge text-white text-xs px-2 py-1 rounded-full">
-                                  ⭐ Richiesto
-                                </span>
+
+                              {/* ✅ NUOVO v2.0: Time and duration fields */}
+                              <div className="grid grid-cols-2 gap-3">
+                                <input
+                                  type="text"
+                                  placeholder="Orario (es. 09:00-11:00)"
+                                  value={activity.time}
+                                  onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'time', e.target.value)}
+                                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                                  style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="Durata (es. 1h30m)"
+                                  value={activity.duration || ''}
+                                  onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'duration', e.target.value)}
+                                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                                  style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
+                                />
+                              </div>
+                              
+                              {activity.cost && (
+                                <input
+                                  type="text"
+                                  placeholder="Costo (es. €20-30)"
+                                  value={activity.cost}
+                                  onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'cost', e.target.value)}
+                                  className="w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                                  style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
+                                />
+                              )}
+                              
+                              {activity.notes && (
+                                <textarea
+                                  placeholder="Note e suggerimenti"
+                                  value={activity.notes}
+                                  onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'notes', e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm h-20 resize-none bg-white"
+                                  style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
+                                />
+                              )}
+                              
+                              {activity.alternatives && activity.alternatives.length > 0 && (
+                                <div className="text-sm text-gray-700 bg-blue-50 p-3 rounded border">
+                                  <strong>Alternative:</strong> {activity.alternatives.join(', ')}
+                                </div>
                               )}
                             </div>
-                            <button 
-                              onClick={() => removeActivity(day.id, movement.id, activity.id)}
-                              className="text-red-500 hover:text-red-700 p-2"
-                            >
-                              <Trash2 className="h-5 w-5" />
-                            </button>
-                          </div>
-
-                          {/* Travel Section se necessario */}
-                          {(movement.from || movement.to) && (
-                            <div className="travel-section rounded-lg p-4 mb-4">
-                              <div className="flex items-center space-x-2 mb-3">
-                                <Zap className="h-4 w-4 text-green-600" />
-                                <span className="text-sm font-medium text-green-800">Come raggiungerlo</span>
-                              </div>
-                              <div className="grid grid-cols-3 gap-3">
-                                <div>
-                                  <label className="text-xs text-green-600 font-medium">Partenza da</label>
-                                  <input 
-                                    type="text" 
-                                    value={movement.from} 
-                                    onChange={(e) => updateMovement(day.id, movement.id, 'from', e.target.value)}
-                                    className="w-full bg-white border border-green-200 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-xs text-green-600 font-medium">Arrivo a</label>
-                                  <input 
-                                    type="text" 
-                                    value={movement.to} 
-                                    onChange={(e) => updateMovement(day.id, movement.id, 'to', e.target.value)}
-                                    className="w-full bg-white border border-green-200 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-xs text-green-600 font-medium">Trasporto</label>
-                                  <input 
-                                    type="text" 
-                                    value={movement.transport || ''} 
-                                    onChange={(e) => updateMovement(day.id, movement.id, 'transport', e.target.value)}
-                                    className="w-full bg-white border border-green-200 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                          ))}
                           
-                          <div className="space-y-4">
-                            <input 
-                              type="text" 
-                              value={activity.name || ''} 
-                              onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'name', e.target.value)}
-                              className={`w-full font-semibold text-lg bg-white border rounded-lg px-4 py-2 focus:ring-2`}
-                              style={{ borderColor: typeInfo.color, focusRingColor: typeInfo.color }}
-                              placeholder="Nome attività"
-                            />
-                            <textarea 
-                              value={activity.description || ''} 
-                              onChange={(e) => updateActivity(day.id, movement.id, activity.id, 'description', e.target.value)}
-                              className={`w-full bg-white border rounded-lg px-4 py-2 text-sm focus:ring-2 h-16 resize-none`}
-                              style={{ borderColor: typeInfo.color, focusRingColor: typeInfo.color }}
-                              placeholder="Descrizione"
-                            />
-                            
-                            {activity.alternatives && activity.alternatives.length > 0 && (
-                              <div>
-                                <label className={`text-xs font-medium`} style={{ color: typeInfo.color }}>Alternative</label>
-                                <input 
-                                  type="text" 
-                                  value={activity.alternatives.join(', ')} 
-                                  readOnly
-                                  className={`w-full bg-white border rounded-lg px-3 py-2 text-sm`}
-                                  style={{ borderColor: typeInfo.color }}
-                                />
-                              </div>
-                            )}
-                          </div>
+                          <button
+                            onClick={() => addActivity(day.id, movement.id)}
+                            className="text-sm text-green-600 hover:text-green-800 flex items-center font-medium"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Aggiungi attività
+                          </button>
                         </div>
                       </div>
-                    );
-                  })
-                )}
-
-                {/* Add Activity Button */}
-                <div className="flex items-center">
-                  <div className="w-64"></div>
-                  <button 
-                    onClick={() => {
-                      if (day.movements.length === 0) {
-                        addMovement(day.id);
-                      } else {
-                        addActivity(day.id, day.movements[day.movements.length - 1].id);
-                      }
-                    }}
-                    className="flex-1 border-2 border-dashed border-gray-400 rounded-xl p-6 text-gray-700 hover:border-gray-500 hover:text-gray-800 transition-colors flex items-center justify-center bg-white hover:bg-gray-50 ml-8"
-                  >
-                    <Plus className="h-6 w-6 mr-2" />
-                    Aggiungi Attività
-                  </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              
+              <button
+                onClick={addDay}
+                className="w-full border-2 border-dashed border-gray-400 rounded-xl p-6 text-gray-700 hover:border-gray-500 hover:text-gray-800 transition-colors flex items-center justify-center bg-gray-50 hover:bg-gray-100"
+              >
+                <Plus className="h-6 w-6 mr-2" />
+                Aggiungi {formatDateForDay(travelPlan.length + 1, tripData.startDate)}
+              </button>
+            </div>
+            
+            {/* Create web page section (invariato) */}
+            {travelPlan.length > 0 && (
+              <div className="mt-8 pt-8 border-t border-gray-200">
+                <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-purple-600 p-2 rounded-lg">
+                      <Globe className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-purple-800 mb-2">
+                        ✨ Trasforma in visualizzazione avanzata
+                      </h4>
+                      <p className="text-purple-700 text-sm mb-4">
+                        Converti il tuo itinerario v2.0 in una pagina web interattiva con mappa, 
+                        statistiche dettagliate, export PDF e possibilità di condivisione.
+                      </p>
+                      <button
+                        onClick={createWebPage}
+                        disabled={convertingToViewer}
+                        className="bg-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-purple-700 disabled:bg-gray-400 transition-colors flex items-center"
+                      >
+                        {convertingToViewer ? (
+                          <>
+                            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                            Convertendo...
+                          </>
+                        ) : (
+                          <>
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Crea pagina web
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
+            
+            {/* Process section with enhanced info */}
+            <div className="mt-8 pt-8 border-t border-gray-200 text-center space-y-4">
+              {travelPlan.length > 0 && userHasModified && (
+                <>
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4 user-changes-notification">
+                    <p className="text-sm text-blue-800 font-medium">
+                      📝 Hai apportato delle modifiche al tuo itinerario v2.0
+                    </p>
+                  </div>
+                  
+                  <button
+                    onClick={processPlan}
+                    disabled={loading}
+                    className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition-colors flex items-center mx-auto"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                        Elaborando...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-5 w-5 mr-2" />
+                        Elabora le modifiche
+                      </>
+                    )}
+                  </button>
+                  
+                  <p className="text-sm text-gray-600">
+                    L'AI completerà e ottimizzerà solo le parti che hai modificato
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Modello globale: {selectedModel} • Formato v2.0
+                  </p>
+                </>
+              )}
+              
+              {travelPlan.length > 0 && !userHasModified && (
+                <div className="text-center">
+                  <p className="text-sm text-gray-500 mb-3">
+                    ✅ Itinerario v2.0 aggiornato. Apporta modifiche per vedere il bottone "Elabora"
+                  </p>
+                  <div className="flex justify-center gap-4">
+                    <button
+                      onClick={() => setCurrentScreen('form')}
+                      className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Nuovo viaggio
+                    </button>
+                    <button
+                      onClick={downloadJSON}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Scarica itinerario v2.0
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          ))}
-
-          {/* Add Day Button */}
-          <button
-            onClick={addDay}
-            className="w-full border-2 border-dashed border-gray-400 rounded-xl p-6 text-gray-700 hover:border-gray-500 hover:text-gray-800 transition-colors flex items-center justify-center bg-white hover:bg-gray-100 mb-8"
-          >
-            <Plus className="h-6 w-6 mr-2" />
-            Aggiungi {formatDateForDay(travelPlan.length + 1, tripData.startDate)}
-          </button>
+          </div>
         </div>
       </div>
     );
