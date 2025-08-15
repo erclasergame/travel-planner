@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
         coordinates: city.lat && city.lng ? [city.lat, city.lng] : null,
         type: city.type || 'unknown'
       },
-      attractions: attractions.map(attr => ({
+      attractions: attractions.map((attr: any) => ({
         id: attr.id,
         name: attr.name,
         description: attr.description,
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
         imageUrl: attr.image_url,
         isActive: attr.is_active !== false
       })),
-      events: events.map(event => ({
+      events: events.map((event: any) => ({
         id: event.id,
         name: event.name,
         description: event.description,
