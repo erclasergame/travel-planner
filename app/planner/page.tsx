@@ -65,7 +65,7 @@ const TravelPlanner = () => {
   }, []);
 
   // ✅ Utility functions for timeline layout  
-  const getActivityTypeInfo = (type) => {
+  const getActivityTypeInfo = (type: string) => {
     const typeMap = {
       travel: { color: '#10b981', icon: '✈️', label: 'TRAVEL' },
       accommodation: { color: '#8b5cf6', icon: '🏨', label: 'HOTEL' },
