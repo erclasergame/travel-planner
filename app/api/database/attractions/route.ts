@@ -1,40 +1,65 @@
-// API Cerca Attrazioni nel Database - Versione Corretta
-// File: app/api/database/attractions/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
-import { XataHelper, Attraction, City } from '@/lib/xata';
 
-// GET - Cerca attrazioni per città
+const XATA_API_KEY = process.env.XATA_API_KEY;
+const XATA_DATABASE_URL = process.env.XATA_DATABASE_URL;
+
+if (!XATA_API_KEY || !XATA_DATABASE_URL) {
+  throw new Error('Missing Xata configuration');
+}
+
+// Helper function for Xata API calls
+async function xataQuery(endpoint: string, options: any = {}) {
+  const url = `${XATA_DATABASE_URL}${endpoint}`;
+  
+  const response = await fetch(url, {
+    method: options.method || 'POST',
+    headers: {
+      'Authorization': `Bearer ${XATA_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Xata API error: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const url = new URL(request.url);
-    const city = url.searchParams.get('city');
-    const type = url.searchParams.get('type');
-    const minCount = parseInt(url.searchParams.get('minCount') || '0');
+    const { searchParams } = new URL(request.url);
+    const cityName = searchParams.get('city');
+    const type = searchParams.get('type'); // optional filter
 
-    if (!city) {
+    if (!cityName) {
       return NextResponse.json({
         success: false,
-        error: 'Parameter "city" is required'
+        error: 'City parameter required'
       }, { status: 400 });
     }
 
-    console.log(`🔍 Searching attractions for city: ${city}, type: ${type || 'all'}`);
+    console.log('🔍 Searching for city:', cityName);
 
-    // Debug URL construction
-    console.log('Database URL:', process.env.XATA_DATABASE_URL);
-    console.log('API Key configured:', !!process.env.XATA_API_KEY);
-    
-    // Cerca città nel database
-    const foundCity = await XataHelper.findCityByName(city);
-    
-    if (!foundCity) {
-      console.log(`❌ City "${city}" not found in database`);
+    // Step 1: Find the city
+    const cityQuery = {
+      filter: {
+        name: { $icontains: cityName } // Case insensitive search
+      }
+    };
+
+    const cityResult = await xataQuery('/tables/cities/query', {
+      body: cityQuery
+    });
+
+    if (!cityResult.records || cityResult.records.length === 0) {
+      console.log('❌ City not found:', cityName);
       return NextResponse.json({
         success: false,
         found: false,
-        city: city,
-        message: `City "${city}" not found in database`,
+        city: cityName,
+        message: `City "${cityName}" not found in database`,
         attractions: [],
         suggestions: {
           useAI: true,
@@ -43,73 +68,116 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Cerca attrazioni per la città
-    const attractions = await XataHelper.getAttractionsByCity(foundCity.id);
-    const events = await XataHelper.getEventsByCity(foundCity.id);
+    const city = cityResult.records[0];
+    console.log('✅ City found:', city.name, 'ID:', city.id);
 
-    console.log(`✅ Found ${attractions.length} attractions and ${events.length} events for ${city}`);
+    // Step 2: Get attractions for this city
+    const attractionQuery = {
+      filter: {
+        city_id: city.id // Use the city ID to find attractions
+      }
+    };
 
-    // Controlla se abbiamo abbastanza contenuto
+    // Add type filter if specified
+    if (type) {
+      attractionQuery.filter.type = type;
+    }
+
+    console.log('🎯 Attraction query:', JSON.stringify(attractionQuery, null, 2));
+
+    const attractionResult = await xataQuery('/tables/attractions/query', {
+      body: attractionQuery
+    });
+
+    console.log('🏛️ Attractions found:', attractionResult.records?.length || 0);
+
+    // Step 3: Get events for this city
+    const eventQuery = {
+      filter: {
+        city_id: city.id
+      }
+    };
+
+    const eventResult = await xataQuery('/tables/events/query', {
+      body: eventQuery
+    });
+
+    console.log('🎉 Events found:', eventResult.records?.length || 0);
+
+    // Step 4: Process results
+    const attractions = attractionResult.records || [];
+    const events = eventResult.records || [];
     const totalContent = attractions.length + events.length;
-    const hasEnoughContent = totalContent >= minCount;
 
-    return NextResponse.json({
+    // Simple logic for "enough content"
+    const minRequired = 3; // Need at least 3 items for a basic itinerary
+    const hasEnoughContent = totalContent >= minRequired;
+
+    const response = {
       success: true,
       found: true,
       city: {
-        id: foundCity.id,
-        name: foundCity.name,
-        coordinates: [foundCity.lat, foundCity.lng],
-        type: foundCity.type
+        id: city.id,
+        name: city.name,
+        coordinates: city.lat && city.lng ? [city.lat, city.lng] : null,
+        type: city.type || 'unknown'
       },
-      attractions: attractions.map(attraction => ({
-        id: attraction.id,
-        name: attraction.name,
-        description: attraction.description,
-        type: attraction.type,
-        subtype: attraction.subtype,
-        coordinates: [attraction.lat, attraction.lng],
-        duration: attraction.visit_duration,
-        cost: attraction.cost_range,
-        image_url: attraction.image_url,
-        verified: !!attraction.xata?.createdAt
+      attractions: attractions.map(attr => ({
+        id: attr.id,
+        name: attr.name,
+        description: attr.description,
+        type: attr.type,
+        subtype: attr.subtype,
+        coordinates: attr.lat && attr.lng ? [attr.lat, attr.lng] : null,
+        duration: attr.visit_duration,
+        cost: attr.cost_range,
+        imageUrl: attr.image_url,
+        isActive: attr.is_active !== false
       })),
       events: events.map(event => ({
         id: event.id,
         name: event.name,
         description: event.description,
+        recurrence: event.recurrence_rule,
         season: event.season,
         duration: event.duration,
         cost: event.cost_range,
-        recurrence: event.recurrence_rule
+        imageUrl: event.image_url,
+        isActive: event.is_active !== false
       })),
       stats: {
         attractions_count: attractions.length,
         events_count: events.length,
         total_content: totalContent,
         has_enough_content: hasEnoughContent,
-        min_required: minCount
+        min_required: minRequired
       },
       suggestions: {
         useAI: !hasEnoughContent,
         reason: hasEnoughContent ? 'sufficient_content' : 'insufficient_content',
         recommendation: hasEnoughContent 
-          ? 'Use database content for itinerary' 
+          ? 'Use database content for itinerary'
           : 'Supplement with AI search'
       },
       timestamp: new Date().toISOString()
-    });
+    };
+
+    console.log('📊 Final response stats:', response.stats);
+
+    return NextResponse.json(response);
 
   } catch (error: unknown) {
-    console.error('❌ Error searching attractions:', error);
-    
     const err = error as Error;
+    console.error('❌ Database attractions error:', err.message);
     
     return NextResponse.json({
       success: false,
-      error: 'Database search failed',
+      error: 'Database query failed',
       details: err.message,
-      timestamp: new Date().toISOString()
+      suggestions: {
+        useAI: true,
+        reason: 'database_error'
+      }
     }, { status: 500 });
   }
 }
