@@ -269,7 +269,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
         hasMetadata: !!itineraryMetadata
       });
 
-      const convertedItinerary = convertTravelPlannerToViewer(originalItinerary);
+      const convertedItinerary = convertTravelPlannerToViewer(originalItinerary) as any;
 
       console.log('✅ Conversione completata:', {
         title: convertedItinerary.metadata.title,
