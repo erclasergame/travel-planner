@@ -1,14 +1,14 @@
-// Xata Database Client
+// Xata Database Client - Versione Semplificata
 // File: lib/xata.ts
 
-import { XataClient } from '@xata.io/client';
+import { XataApiClient } from '@xata.io/client';
 
-// Interfacce TypeScript per le tabelle
+// Interfacce TypeScript semplificate
 export interface Continent {
   id: string;
   name: string;
   code: string;
-  created_at: Date;
+  xata?: any;
 }
 
 export interface Country {
@@ -17,7 +17,7 @@ export interface Country {
   name: string;
   code: string;
   flag_url?: string;
-  created_at: Date;
+  xata?: any;
 }
 
 export interface Region {
@@ -25,18 +25,18 @@ export interface Region {
   country_id: string;
   name: string;
   type: string;
-  created_at: Date;
+  xata?: any;
 }
 
 export interface City {
   id: string;
   region_id: string;
   name: string;
-  type: 'major' | 'secondary';
+  type: string;
   lat: number;
   lng: number;
   population?: number;
-  created_at: Date;
+  xata?: any;
 }
 
 export interface Attraction {
@@ -44,18 +44,16 @@ export interface Attraction {
   city_id: string;
   name: string;
   description: string;
-  type: 'monument' | 'museum' | 'park' | 'shopping' | 'restaurant';
+  type: string;
   subtype?: string;
   lat: number;
   lng: number;
   visit_duration?: string;
-  opening_hours?: any;
   cost_range?: string;
   image_url?: string;
   image_alt?: string;
-  created_at: Date;
-  last_verified?: Date;
   is_active: boolean;
+  xata?: any;
 }
 
 export interface Event {
@@ -64,110 +62,94 @@ export interface Event {
   name: string;
   description: string;
   recurrence_rule?: string;
-  season?: 'spring' | 'summer' | 'autumn' | 'winter';
+  season?: string;
   duration?: string;
   cost_range?: string;
   image_url?: string;
   image_alt?: string;
-  created_at: Date;
-  last_verified?: Date;
   is_active: boolean;
+  xata?: any;
 }
 
-// Schema configuration per Xata
-const schema = {
-  tables: [
-    {
-      name: 'continents',
-      columns: [
-        { name: 'name', type: 'string' },
-        { name: 'code', type: 'string' },
-      ],
-    },
-    {
-      name: 'countries',
-      columns: [
-        { name: 'continent_id', type: 'link', link: { table: 'continents' } },
-        { name: 'name', type: 'string' },
-        { name: 'code', type: 'string' },
-        { name: 'flag_url', type: 'string' },
-      ],
-    },
-    {
-      name: 'regions',
-      columns: [
-        { name: 'country_id', type: 'link', link: { table: 'countries' } },
-        { name: 'name', type: 'string' },
-        { name: 'type', type: 'string' },
-      ],
-    },
-    {
-      name: 'cities',
-      columns: [
-        { name: 'region_id', type: 'link', link: { table: 'regions' } },
-        { name: 'name', type: 'string' },
-        { name: 'type', type: 'string' },
-        { name: 'lat', type: 'float' },
-        { name: 'lng', type: 'float' },
-        { name: 'population', type: 'int' },
-      ],
-    },
-    {
-      name: 'attractions',
-      columns: [
-        { name: 'city_id', type: 'link', link: { table: 'cities' } },
-        { name: 'name', type: 'string' },
-        { name: 'description', type: 'text' },
-        { name: 'type', type: 'string' },
-        { name: 'subtype', type: 'string' },
-        { name: 'lat', type: 'float' },
-        { name: 'lng', type: 'float' },
-        { name: 'visit_duration', type: 'string' },
-        { name: 'opening_hours', type: 'json' },
-        { name: 'cost_range', type: 'string' },
-        { name: 'image_url', type: 'string' },
-        { name: 'image_alt', type: 'string' },
-        { name: 'last_verified', type: 'datetime' },
-        { name: 'is_active', type: 'bool' },
-      ],
-    },
-    {
-      name: 'events',
-      columns: [
-        { name: 'city_id', type: 'link', link: { table: 'cities' } },
-        { name: 'name', type: 'string' },
-        { name: 'description', type: 'text' },
-        { name: 'recurrence_rule', type: 'string' },
-        { name: 'season', type: 'string' },
-        { name: 'duration', type: 'string' },
-        { name: 'cost_range', type: 'string' },
-        { name: 'image_url', type: 'string' },
-        { name: 'image_alt', type: 'string' },
-        { name: 'last_verified', type: 'datetime' },
-        { name: 'is_active', type: 'bool' },
-      ],
-    },
-  ],
-};
-
-// Inizializza client Xata
-const xataClient = new XataClient({
+// Inizializza client Xata con configurazione base
+const xataClient = new XataApiClient({
   databaseURL: process.env.XATA_DATABASE_URL,
   apiKey: process.env.XATA_API_KEY,
   branch: process.env.XATA_BRANCH || 'main',
 });
 
-// Funzioni helper per query comuni
+// Funzioni helper semplificate
 export class XataHelper {
   
-  // Cerca città per nome (case insensitive)
+  // Test connessione base
+  static async testConnection(): Promise<boolean> {
+    try {
+      // Prova una query semplice
+      const response = await fetch(`${process.env.XATA_DATABASE_URL}/tables/continents/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          page: { size: 1 }
+        })
+      });
+      
+      return response.ok;
+    } catch (error) {
+      console.error('Xata connection test failed:', error);
+      return false;
+    }
+  }
+
+  // Conta records in una tabella
+  static async countRecords(tableName: string): Promise<number> {
+    try {
+      const response = await fetch(`${process.env.XATA_DATABASE_URL}/tables/${tableName}/summarize`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          summaries: {
+            totalCount: { count: "*" }
+          }
+        })
+      });
+      
+      if (!response.ok) return 0;
+      
+      const data = await response.json();
+      return data.summaries?.[0]?.totalCount || 0;
+    } catch (error) {
+      console.error(`Error counting ${tableName}:`, error);
+      return 0;
+    }
+  }
+
+  // Cerca città per nome
   static async findCityByName(cityName: string): Promise<City | null> {
     try {
-      const cities = await xataClient.db.cities
-        .filter({ name: { $iContains: cityName } })
-        .getFirst();
+      const response = await fetch(`${process.env.XATA_DATABASE_URL}/tables/cities/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filter: {
+            name: { $iContains: cityName }
+          },
+          page: { size: 1 }
+        })
+      });
       
-      return cities;
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      return data.records?.[0] || null;
     } catch (error) {
       console.error('Error finding city:', error);
       return null;
@@ -175,102 +157,53 @@ export class XataHelper {
   }
 
   // Ottieni attrazioni per città
-  static async getAttractionsByCity(cityId: string, type?: string): Promise<Attraction[]> {
+  static async getAttractionsByCity(cityId: string): Promise<Attraction[]> {
     try {
-      let query = xataClient.db.attractions
-        .filter({ city_id: cityId, is_active: true });
+      const response = await fetch(`${process.env.XATA_DATABASE_URL}/tables/attractions/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filter: {
+            city_id: cityId,
+            is_active: true
+          }
+        })
+      });
       
-      if (type) {
-        query = query.filter({ type });
-      }
+      if (!response.ok) return [];
       
-      const attractions = await query.getAll();
-      return attractions;
+      const data = await response.json();
+      return data.records || [];
     } catch (error) {
       console.error('Error getting attractions:', error);
       return [];
     }
   }
 
-  // Ottieni eventi per città
-  static async getEventsByCity(cityId: string, season?: string): Promise<Event[]> {
+  // Crea record in una tabella
+  static async createRecord(tableName: string, record: any): Promise<any> {
     try {
-      let query = xataClient.db.events
-        .filter({ city_id: cityId, is_active: true });
-      
-      if (season) {
-        query = query.filter({ season });
-      }
-      
-      const events = await query.getAll();
-      return events;
-    } catch (error) {
-      console.error('Error getting events:', error);
-      return [];
-    }
-  }
-
-  // Salva nuova attrazione
-  static async saveAttraction(attraction: Omit<Attraction, 'id' | 'created_at'>): Promise<Attraction | null> {
-    try {
-      const saved = await xataClient.db.attractions.create({
-        ...attraction,
-        is_active: true,
-        created_at: new Date(),
+      const response = await fetch(`${process.env.XATA_DATABASE_URL}/tables/${tableName}/data`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(record)
       });
       
-      return saved;
+      if (!response.ok) return null;
+      
+      return await response.json();
     } catch (error) {
-      console.error('Error saving attraction:', error);
+      console.error(`Error creating record in ${tableName}:`, error);
       return null;
-    }
-  }
-
-  // Cerca città con attrazioni count
-  static async getCitiesWithStats(): Promise<any[]> {
-    try {
-      // Query complessa per statistiche
-      const cities = await xataClient.db.cities.getAll();
-      
-      const citiesWithStats = await Promise.all(
-        cities.map(async (city) => {
-          const attractionsCount = await xataClient.db.attractions
-            .filter({ city_id: city.id, is_active: true })
-            .summarize({ totalCount: { count: '*' } });
-          
-          const eventsCount = await xataClient.db.events
-            .filter({ city_id: city.id, is_active: true })
-            .summarize({ totalCount: { count: '*' } });
-          
-          return {
-            ...city,
-            attractions_count: attractionsCount.summaries[0]?.totalCount || 0,
-            events_count: eventsCount.summaries[0]?.totalCount || 0,
-          };
-        })
-      );
-      
-      return citiesWithStats;
-    } catch (error) {
-      console.error('Error getting cities with stats:', error);
-      return [];
-    }
-  }
-
-  // Verifica connessione database
-  static async testConnection(): Promise<boolean> {
-    try {
-      await xataClient.db.continents.getFirst();
-      return true;
-    } catch (error) {
-      console.error('Xata connection test failed:', error);
-      return false;
     }
   }
 }
 
 // Export client principale
 export default xataClient;
-
-// Export per debugging
-export const xata = xataClient;
