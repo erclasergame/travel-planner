@@ -16,7 +16,7 @@ import { saveConvertedItinerary } from '@/utils/storageManager';
 const TravelPlanner = () => {
   const router = useRouter();
   
-  // ✅ All existing state management (preserved from original)
+  // ✅ All existing state management
   const [currentScreen, setCurrentScreen] = useState('form');
   const [tripData, setTripData] = useState({
     from: '',
@@ -39,7 +39,7 @@ const TravelPlanner = () => {
   const [lastAIVersion, setLastAIVersion] = useState(null);
   const [itineraryMetadata, setItineraryMetadata] = useState(null);
 
-  // ✅ Carica modello globale dal server (preserved)
+  // ✅ Carica modello globale dal server
   useEffect(() => {
     const loadGlobalModel = async () => {
       try {
@@ -101,10 +101,8 @@ const TravelPlanner = () => {
     return '';
   };
 
-  // ✅ ALL EXISTING FUNCTIONS (preserved from original file)
-  
   // Enhanced activity type detection
-  const getActivityTypeInfo = (description, existingType) => {
+  const getActivityTypeInfoDetailed = (description, existingType) => {
     const desc = description?.toLowerCase() || '';
     
     if (existingType) {
@@ -285,6 +283,17 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
         console.warn('⚠️ Impossibile salvare in sessionStorage, procedo comunque');
       }
 
+      console.log('🚀 Reindirizzando a viewer/result...');
+      router.push('/viewer/result');
+
+    } catch (error) {
+      console.error('❌ Errore conversione locale:', error);
+      alert(`Errore durante la conversione: ${error.message}`);
+    } finally {
+      setConvertingToViewer(false);
+    }
+  };
+
   // Enhanced AI generation with new format
   const generateAIPlan = async () => {
     if (!selectedModel) {
@@ -378,7 +387,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
             to: movement.to || '',
             transport: movement.transport || '',
             activities: (movement.activities || []).map((activity, aIndex) => {
-              const typeInfo = getActivityTypeInfo(activity.description || '');
+              const typeInfo = getActivityTypeInfoDetailed(activity.description || '');
               return {
                 id: generateActivityId(day.day || (index + 1), aIndex),
                 name: activity.description?.split('.')[0]?.split(',')[0]?.trim() || '',
@@ -520,7 +529,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                         
                         // Auto-update type when description changes
                         if (field === 'description' && value) {
-                          const typeInfo = getActivityTypeInfo(value, activity.type);
+                          const typeInfo = getActivityTypeInfoDetailed(value, activity.type);
                           updatedActivity.type = typeInfo.type;
                           
                           // Auto-generate name from description if name is empty
@@ -640,10 +649,6 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
     URL.revokeObjectURL(url);
   };
 
-  };
-
-  // ✅ RENDER FUNCTIONS
-
   // SCREEN 1: Form iniziale
   if (currentScreen === 'form') {
     return (
@@ -724,7 +729,6 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
                 />
               </div>
 
-              {/* Campo Start Date */}
               <div className="relative">
                 <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                 <input
@@ -785,7 +789,6 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
               )}
             </button>
             
-            {/* Enhanced debug info */}
             <div className="text-xs text-gray-400 text-center border-t pt-4">
               <p>Modello globale: <strong>{selectedModel || 'Non configurato'}</strong></p>
               {selectedModel && <p className="text-green-600">✅ Sistema v2.1 Timeline configurato dall'amministratore</p>}
@@ -807,6 +810,11 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
               )}
             </div>
           </div>
+        )}
+      </div>
+    );
+  }
+
   // SCREEN 2: Editor itinerario con Timeline Layout 
   if (currentScreen === 'editor') {
     return (
