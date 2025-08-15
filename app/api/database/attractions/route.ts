@@ -42,12 +42,22 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 Searching for city:', cityName);
 
-    // Step 1: Find the city
+    // Step 1: Find the city - simplified query for Xata
+    console.log('🔍 Searching for city:', cityName);
+    
     const cityQuery = {
       filter: {
-        name: { $icontains: cityName } // Case insensitive search
+        name: cityName  // Simple exact match first
       }
     };
+
+    console.log('🔍 City query:', JSON.stringify(cityQuery, null, 2));
+
+    const cityResult = await xataQuery('/tables/cities/query', {
+      body: cityQuery
+    });
+
+    console.log('🔍 City result:', JSON.stringify(cityResult, null, 2));
 
     const cityResult = await xataQuery('/tables/cities/query', {
       body: cityQuery
