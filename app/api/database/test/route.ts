@@ -1,8 +1,8 @@
-// API Test Connessione Database
+// API Test Connessione Database - Versione Semplificata
 // File: app/api/database/test/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import xataClient, { XataHelper } from '@/lib/xata';
+import { XataHelper } from '@/lib/xata';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,13 +15,13 @@ export async function GET(request: NextRequest) {
       throw new Error('Connection test failed');
     }
 
-    // Test table access
-    const continents = await xataClient.db.continents.getAll();
-    const countries = await xataClient.db.countries.getAll();
-    const regions = await xataClient.db.regions.getAll();
-    const cities = await xataClient.db.cities.getAll();
-    const attractions = await xataClient.db.attractions.getAll();
-    const events = await xataClient.db.events.getAll();
+    // Count records in each table
+    const continentsCount = await XataHelper.countRecords('continents');
+    const countriesCount = await XataHelper.countRecords('countries');
+    const regionsCount = await XataHelper.countRecords('regions');
+    const citiesCount = await XataHelper.countRecords('cities');
+    const attractionsCount = await XataHelper.countRecords('attractions');
+    const eventsCount = await XataHelper.countRecords('events');
 
     console.log('✅ Database connection successful');
 
@@ -29,12 +29,12 @@ export async function GET(request: NextRequest) {
       success: true,
       message: 'Database connection successful',
       stats: {
-        continents: continents.length,
-        countries: countries.length,
-        regions: regions.length,
-        cities: cities.length,
-        attractions: attractions.length,
-        events: events.length,
+        continents: continentsCount,
+        countries: countriesCount,
+        regions: regionsCount,
+        cities: citiesCount,
+        attractions: attractionsCount,
+        events: eventsCount,
       },
       environment: {
         database_url: process.env.XATA_DATABASE_URL ? 'configured' : 'missing',
@@ -68,143 +68,130 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🌱 Populating initial test data...');
 
-    // Crea continente Europa se non esiste
-    let europa = await xataClient.db.continents
-      .filter({ code: 'EU' })
-      .getFirst();
+    // Crea continente Europa
+    const europa = await XataHelper.createRecord('continents', {
+      name: 'Europa',
+      code: 'EU'
+    });
 
     if (!europa) {
-      europa = await xataClient.db.continents.create({
-        name: 'Europa',
-        code: 'EU',
-      });
-      console.log('✅ Created continent Europa');
+      throw new Error('Failed to create Europa continent');
     }
 
-    // Crea Italia se non esiste
-    let italia = await xataClient.db.countries
-      .filter({ code: 'IT' })
-      .getFirst();
+    console.log('✅ Created continent Europa:', europa.id);
+
+    // Crea Italia
+    const italia = await XataHelper.createRecord('countries', {
+      continent_id: europa.id,
+      name: 'Italia',
+      code: 'IT',
+      flag_url: '🇮🇹'
+    });
 
     if (!italia) {
-      italia = await xataClient.db.countries.create({
-        continent_id: europa.id,
-        name: 'Italia',
-        code: 'IT',
-        flag_url: '🇮🇹',
-      });
-      console.log('✅ Created country Italia');
+      throw new Error('Failed to create Italia country');
     }
 
-    // Crea Lazio se non esiste
-    let lazio = await xataClient.db.regions
-      .filter({ name: 'Lazio' })
-      .getFirst();
+    console.log('✅ Created country Italia:', italia.id);
+
+    // Crea Lazio
+    const lazio = await XataHelper.createRecord('regions', {
+      country_id: italia.id,
+      name: 'Lazio',
+      type: 'region'
+    });
 
     if (!lazio) {
-      lazio = await xataClient.db.regions.create({
-        country_id: italia.id,
-        name: 'Lazio',
-        type: 'region',
-      });
-      console.log('✅ Created region Lazio');
+      throw new Error('Failed to create Lazio region');
     }
 
-    // Crea Roma se non esiste
-    let roma = await xataClient.db.cities
-      .filter({ name: 'Roma' })
-      .getFirst();
+    console.log('✅ Created region Lazio:', lazio.id);
+
+    // Crea Roma
+    const roma = await XataHelper.createRecord('cities', {
+      region_id: lazio.id,
+      name: 'Roma',
+      type: 'major',
+      lat: 41.9028,
+      lng: 12.4964,
+      population: 2870000
+    });
 
     if (!roma) {
-      roma = await xataClient.db.cities.create({
-        region_id: lazio.id,
-        name: 'Roma',
-        type: 'major',
-        lat: 41.9028,
-        lng: 12.4964,
-        population: 2870000,
-      });
-      console.log('✅ Created city Roma');
+      throw new Error('Failed to create Roma city');
     }
 
-    // Crea alcune attrazioni test se non esistono
-    const existingAttractions = await xataClient.db.attractions
-      .filter({ city_id: roma.id })
-      .getAll();
+    console.log('✅ Created city Roma:', roma.id);
 
-    if (existingAttractions.length === 0) {
-      const testAttractions = [
-        {
-          city_id: roma.id,
-          name: 'Colosseo',
-          description: 'Il più grande anfiteatro mai costruito',
-          type: 'monument' as const,
-          subtype: 'historical',
-          lat: 41.8902,
-          lng: 12.4922,
-          visit_duration: '2h30m',
-          cost_range: '€16',
-          is_active: true,
-        },
-        {
-          city_id: roma.id,
-          name: 'Fontana di Trevi',
-          description: 'La fontana più famosa di Roma',
-          type: 'monument' as const,
-          subtype: 'landmark',
-          lat: 41.9009,
-          lng: 12.4833,
-          visit_duration: '30m',
-          cost_range: 'Gratuito',
-          is_active: true,
-        },
-        {
-          city_id: roma.id,
-          name: 'Musei Vaticani',
-          description: 'Collezione d\'arte dei Papi',
-          type: 'museum' as const,
-          subtype: 'art',
-          lat: 41.9066,
-          lng: 12.4534,
-          visit_duration: '3h',
-          cost_range: '€21',
-          is_active: true,
-        }
-      ];
-
-      for (const attraction of testAttractions) {
-        await xataClient.db.attractions.create(attraction);
+    // Crea attrazioni test
+    const testAttractions = [
+      {
+        city_id: roma.id,
+        name: 'Colosseo',
+        description: 'Il più grande anfiteatro mai costruito',
+        type: 'monument',
+        subtype: 'historical',
+        lat: 41.8902,
+        lng: 12.4922,
+        visit_duration: '2h30m',
+        cost_range: '€16',
+        is_active: true
+      },
+      {
+        city_id: roma.id,
+        name: 'Fontana di Trevi',
+        description: 'La fontana più famosa di Roma',
+        type: 'monument',
+        subtype: 'landmark',
+        lat: 41.9009,
+        lng: 12.4833,
+        visit_duration: '30m',
+        cost_range: 'Gratuito',
+        is_active: true
+      },
+      {
+        city_id: roma.id,
+        name: 'Musei Vaticani',
+        description: 'Collezione d\'arte dei Papi',
+        type: 'museum',
+        subtype: 'art',
+        lat: 41.9066,
+        lng: 12.4534,
+        visit_duration: '3h',
+        cost_range: '€21',
+        is_active: true
       }
-      
-      console.log(`✅ Created ${testAttractions.length} test attractions`);
+    ];
+
+    let attractionsCreated = 0;
+    for (const attraction of testAttractions) {
+      const created = await XataHelper.createRecord('attractions', attraction);
+      if (created) {
+        attractionsCreated++;
+        console.log(`✅ Created attraction: ${attraction.name}`);
+      }
     }
 
     // Ottieni statistiche finali
-    const stats = await Promise.all([
-      xataClient.db.continents.getAll(),
-      xataClient.db.countries.getAll(),
-      xataClient.db.regions.getAll(),
-      xataClient.db.cities.getAll(),
-      xataClient.db.attractions.getAll(),
-      xataClient.db.events.getAll(),
-    ]);
+    const finalStats = {
+      continents: await XataHelper.countRecords('continents'),
+      countries: await XataHelper.countRecords('countries'),
+      regions: await XataHelper.countRecords('regions'),
+      cities: await XataHelper.countRecords('cities'),
+      attractions: await XataHelper.countRecords('attractions'),
+      events: await XataHelper.countRecords('events'),
+    };
 
     return NextResponse.json({
       success: true,
       message: 'Test data populated successfully',
-      stats: {
-        continents: stats[0].length,
-        countries: stats[1].length,
-        regions: stats[2].length,
-        cities: stats[3].length,
-        attractions: stats[4].length,
-        events: stats[5].length,
-      },
+      stats: finalStats,
       created: {
-        europa: !!europa,
-        italia: !!italia,
-        lazio: !!lazio,
-        roma: !!roma,
+        europa_id: europa.id,
+        italia_id: italia.id,
+        lazio_id: lazio.id,
+        roma_id: roma.id,
+        attractions_created: attractionsCreated
       },
       timestamp: new Date().toISOString(),
     });
