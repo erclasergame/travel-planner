@@ -72,16 +72,18 @@ export async function GET(request: NextRequest) {
     console.log('✅ City found:', city.name, 'ID:', city.id);
 
     // Step 2: Get attractions for this city
-    const attractionQuery = {
-      filter: {
-        city_id: city.id // Use the city ID to find attractions
-      }
+    const attractionFilter: any = {
+      city_id: city.id // Use the city ID to find attractions
     };
 
     // Add type filter if specified
     if (type) {
-      attractionQuery.filter.type = type;
+      attractionFilter.type = type;
     }
+
+    const attractionQuery = {
+      filter: attractionFilter
+    };
 
     console.log('🎯 Attraction query:', JSON.stringify(attractionQuery, null, 2));
 
