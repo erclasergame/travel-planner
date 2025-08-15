@@ -36,7 +36,7 @@ const TravelPlanner = () => {
   
   // Tracking modifiche utente
   const [userHasModified, setUserHasModified] = useState(false);
-  const [lastAIVersion, setLastAIVersion] = useState(null);
+  const [lastAIVersion, setLastAIVersion] = useState<string | null>(null);
   const [itineraryMetadata, setItineraryMetadata] = useState(null);
 
   // ✅ Carica modello globale dal server
