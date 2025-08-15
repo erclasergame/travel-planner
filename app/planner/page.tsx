@@ -222,7 +222,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
   };
 
   // Salva snapshot per tracciare modifiche
-  const saveAISnapshot = (plan) => {
+  const saveAISnapshot = (plan: any[]) => {
     setLastAIVersion(JSON.stringify(plan));
     setUserHasModified(false);
   };
