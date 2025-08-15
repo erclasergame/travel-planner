@@ -31,7 +31,7 @@ const TravelPlanner = () => {
   const [convertingToViewer, setConvertingToViewer] = useState(false);
   
   // Modello globale dal server
-  const [selectedModel, setSelectedModel] = useState(null);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   
   // Tracking modifiche utente
