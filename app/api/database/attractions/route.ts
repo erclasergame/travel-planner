@@ -9,6 +9,10 @@ if (!XATA_API_KEY || !XATA_DATABASE_URL) {
 
 // Helper function for Xata API calls
 async function xataQuery(tableName: string, queryBody: any) {
+  if (!XATA_DATABASE_URL) {
+    throw new Error('XATA_DATABASE_URL not configured');
+  }
+  
   // Extract database and branch from URL
   // URL format: https://workspace.region.xata.sh/db/database_name:branch
   const urlMatch = XATA_DATABASE_URL.match(/\/db\/([^:]+):(.+)$/);
