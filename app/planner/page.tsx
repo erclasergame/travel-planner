@@ -919,6 +919,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
             min-width: 200px;
             max-width: 280px;
             cursor: pointer;
+            width: 280px;
           }
           
           .info-balloon.travel { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
@@ -951,7 +952,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           
           .timeline-line {
             position: absolute;
-            left: 15.5rem;
+            left: 300px;
             top: 0;
             bottom: 0;
             width: 2px;
@@ -960,7 +961,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           
           .timeline-dot {
             position: absolute;
-            left: 15rem;
+            left: 294px;
             width: 12px;
             height: 12px;
             background: #3b82f6;
@@ -980,7 +981,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
           
           .connector-line {
             position: absolute;
-            left: 16rem;
+            left: 306px;
             height: 2px;
             background: #d1d5db;
             top: 50%;
@@ -1288,7 +1289,7 @@ Preferiamo un itinerario che ci faccia sentire come abitanti temporanei piuttost
 
                 {/* Add Activity Button */}
                 <div className="flex items-center">
-                  <div className="w-64"></div>
+                  <div className="w-80"></div>
                   <button 
                     onClick={() => {
                       if (day.movements.length === 0) {
