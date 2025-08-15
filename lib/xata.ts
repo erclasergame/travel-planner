@@ -1,7 +1,5 @@
-// Xata Database Client - Versione Semplificata
+// Xata Database - Solo HTTP Calls
 // File: lib/xata.ts
-
-import { XataApiClient } from '@xata.io/client';
 
 // Interfacce TypeScript semplificate
 export interface Continent {
@@ -71,20 +69,16 @@ export interface Event {
   xata?: any;
 }
 
-// Inizializza client Xata con configurazione base
-const xataClient = new XataApiClient({
-  databaseURL: process.env.XATA_DATABASE_URL,
-  apiKey: process.env.XATA_API_KEY,
-  branch: process.env.XATA_BRANCH || 'main',
-});
-
-// Funzioni helper semplificate
+// Funzioni helper pure HTTP
 export class XataHelper {
   
   // Test connessione base
   static async testConnection(): Promise<boolean> {
     try {
-      // Prova una query semplice
+      if (!process.env.XATA_DATABASE_URL || !process.env.XATA_API_KEY) {
+        return false;
+      }
+
       const response = await fetch(`${process.env.XATA_DATABASE_URL}/tables/continents/query`, {
         method: 'POST',
         headers: {
@@ -195,7 +189,10 @@ export class XataHelper {
         body: JSON.stringify(record)
       });
       
-      if (!response.ok) return null;
+      if (!response.ok) {
+        console.error(`Failed to create record in ${tableName}:`, response.status, await response.text());
+        return null;
+      }
       
       return await response.json();
     } catch (error) {
@@ -204,6 +201,3 @@ export class XataHelper {
     }
   }
 }
-
-// Export client principale
-export default xataClient;
