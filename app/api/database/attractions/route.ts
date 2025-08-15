@@ -91,11 +91,15 @@ export async function GET(request: NextRequest) {
     }
 
     const city = cityResult.records[0];
-    console.log('✅ City found:', city.name, 'ID:', city.id);
+    console.log('✅ City found:', city.name, 'ID:', city.id, 'Type:', typeof city.id);
 
     // Step 2: Get attractions for this city
+    // Convert city.id to integer as Xata expects int for city_id
+    const cityIdInt = parseInt(city.id, 10);
+    console.log('🔢 Converting city.id to int:', city.id, '→', cityIdInt);
+    
     const attractionFilter: any = {
-      city_id: city.id // Use the city ID to find attractions
+      city_id: cityIdInt // Use integer instead of string
     };
 
     // Add type filter if specified
@@ -116,7 +120,7 @@ export async function GET(request: NextRequest) {
     // Step 3: Get events for this city
     const eventQuery = {
       filter: {
-        city_id: city.id
+        city_id: cityIdInt // Use integer here too
       }
     };
 
