@@ -26,7 +26,8 @@ export async function GET() {
       timestamp: new Date().toISOString(),
       cors_enabled: true,
       endpoint: '/api/admin/bulk-insert',
-      status: 'ready'
+      status: 'ready',
+      database: 'xata_lite_connected'
     },
     {
       status: 200,
@@ -72,45 +73,85 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Processing ${data.length} records for table ${table}`);
     
+    // Connessione Xata Lite
+    const XATA_API_KEY = process.env.XATA_API_KEY;
+    const XATA_DB_URL = process.env.XATA_DB_URL || 'https://testdaniele77-1-s-workspace-j00f29.eu-central-1.xata.sh/db/travel_planner:main';
+    
+    if (!XATA_API_KEY) {
+      return Response.json({
+        success: false,
+        error: 'Database configuration error',
+        message: 'XATA_API_KEY not configured'
+      }, {
+        status: 500,
+        headers: corsHeaders,
+      });
+    }
+    
     // Gestione per tabella cities
     if (table === 'cities') {
-      // Qui va la tua logica Xata esistente
-      // Esempio di come potrebbe essere:
-      /*
-      const { getXataClient } = await import('@/lib/xata');
-      const xata = getXataClient();
+      console.log('📊 Inserting cities into Xata database...');
       
       const results = [];
-      for (const cityData of data) {
+      const errors = [];
+      
+      // Insert records one by one (or in batches)
+      for (let i = 0; i < data.length; i++) {
+        const cityData = data[i];
+        
         try {
-          const result = await xata.db.cities.create(cityData);
-          results.push(result);
-        } catch (error) {
-          console.error('Error inserting city:', cityData, error);
+          // Xata HTTP API call
+          const response = await fetch(`${XATA_DB_URL}/tables/cities/data`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${XATA_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(cityData)
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            results.push(result);
+            console.log(`✅ City inserted: ${cityData.name} (${cityData.country_code})`);
+          } else {
+            const errorData = await response.json();
+            errors.push({
+              city: cityData.name,
+              error: errorData,
+              status: response.status
+            });
+            console.error(`❌ Failed to insert city ${cityData.name}:`, errorData);
+          }
+          
+        } catch (error: any) {
+          errors.push({
+            city: cityData.name,
+            error: error.message,
+            status: 'network_error'
+          });
+          console.error(`❌ Network error inserting city ${cityData.name}:`, error);
         }
       }
-      */
       
-      // Per ora simulo una risposta di successo
-      // SOSTITUISCI QUESTA SEZIONE CON IL TUO CODICE XATA
-      const results = data.map((item: any, index: number) => ({
-        id: `generated_id_${index}`,
-        ...item,
-        inserted_at: new Date().toISOString()
-      }));
+      const successCount = results.length;
+      const errorCount = errors.length;
       
       return Response.json({
-        success: true,
-        message: `Successfully processed ${data.length} cities`,
+        success: successCount > 0,
+        message: `Processed ${data.length} cities: ${successCount} successful, ${errorCount} failed`,
         table: table,
         records_processed: data.length,
-        records_created: results.length,
+        records_created: successCount,
+        records_failed: errorCount,
         batch_size: batch_size || data.length,
         on_conflict_strategy: on_conflict || 'create',
         timestamp: new Date().toISOString(),
-        // results: results // Opzionale: ritorna i record creati
+        results: results.slice(0, 5), // Prime 5 per non sovraccaricare risposta
+        errors: errors.slice(0, 5), // Primi 5 errori per debug
+        database_url: XATA_DB_URL.split('/db/')[0] + '/db/***' // Masked URL
       }, {
-        status: 200,
+        status: successCount > 0 ? 200 : 500,
         headers: corsHeaders,
       });
     }
