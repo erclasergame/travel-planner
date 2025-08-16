@@ -263,12 +263,14 @@ function generateBulkInsertSQL(table: string, data: any[], onConflict: string): 
   let conflictClause = '';
   switch (onConflict) {
     case 'skip':
-      conflictClause = `ON CONFLICT (${conflictColumn}) DO NOTHING`;
+      // conflictClause = `ON CONFLICT (${conflictColumn}) DO NOTHING`;
+      conflictClause = ''; // Temporaneamente disabilitato
       break;
     case 'update':
-      const updateColumns = columns.filter(col => col !== conflictColumn);
-      const updateSet = updateColumns.map(col => `${col} = EXCLUDED.${col}`).join(', ');
-      conflictClause = `ON CONFLICT (${conflictColumn}) DO UPDATE SET ${updateSet}`;
+      // const updateColumns = columns.filter(col => col !== conflictColumn);
+      // const updateSet = updateColumns.map(col => `${col} = EXCLUDED.${col}`).join(', ');
+      // conflictClause = `ON CONFLICT (${conflictColumn}) DO UPDATE SET ${updateSet}`;
+      conflictClause = ''; // Temporaneamente disabilitato
       break;
     case 'error':
       conflictClause = ''; // Nessuna gestione conflitti, fallirà su duplicati
