@@ -10,7 +10,7 @@ interface UploadResult {
   details?: any;
 }
 
-const BulkUploadPage = () => {
+const BulkUploadPage: React.FC = () => {
   const [selectedTable, setSelectedTable] = useState('attractions');
   const [jsonData, setJsonData] = useState('');
   const [loading, setLoading] = useState(false);
@@ -80,7 +80,7 @@ const BulkUploadPage = () => {
         })
       });
 
-      const uploadResult = await response.json();
+      const uploadResult: any = await response.json();
 
       if (response.ok) {
         setResult(uploadResult);
@@ -184,7 +184,7 @@ const BulkUploadPage = () => {
                   onChange={(e) => setSelectedTable(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
-                  {tables.map(table => (
+                  {tables.map((table: any) => (
                     <option key={table.value} value={table.value}>
                       {table.label}
                     </option>
@@ -217,7 +217,7 @@ const BulkUploadPage = () => {
                 <textarea
                   value={jsonData}
                   onChange={(e) => setJsonData(e.target.value)}
-                  placeholder={`Incolla qui il JSON array per ${tables.find(t => t.value === selectedTable)?.label}...`}
+                  placeholder={`Incolla qui il JSON array per ${tables.find((t: any) => t.value === selectedTable)?.label}...`}
                   className="w-full h-64 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono text-sm resize-none"
                   style={{ color: '#111827', WebkitTextFillColor: '#111827' }}
                 />
@@ -250,7 +250,7 @@ const BulkUploadPage = () => {
                   ) : (
                     <>
                       <Upload className="h-5 w-5" />
-                      <span>Carica in {tables.find(t => t.value === selectedTable)?.label}</span>
+                      <span>Carica in {tables.find((t: any) => t.value === selectedTable)?.label}</span>
                     </>
                   )}
                 </button>
@@ -288,7 +288,7 @@ const BulkUploadPage = () => {
                 <div>
                   <span className="text-sm text-gray-600">Tabella selezionata:</span>
                   <p className="font-semibold text-purple-600">
-                    {tables.find(t => t.value === selectedTable)?.label}
+                    {tables.find((t: any) => t.value === selectedTable)?.label}
                   </p>
                 </div>
               </div>
