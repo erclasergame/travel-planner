@@ -1,160 +1,219 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const XATA_API_KEY = process.env.XATA_API_KEY;
-const XATA_DATABASE_URL = process.env.XATA_DATABASE_URL;
-
-if (!XATA_API_KEY || !XATA_DATABASE_URL) {
-  throw new Error('Missing Xata configuration');
+interface BulkUploadRequest {
+  table: string;
+  data: any[];
 }
 
-// Helper function for Xata API calls
-async function xataInsert(tableName: string, recordData: any) {
-  if (!XATA_DATABASE_URL) {
-    throw new Error('XATA_DATABASE_URL not configured');
-  }
-  
-  // Extract database and branch from URL
-  const urlMatch = XATA_DATABASE_URL.match(/\/db\/([^:]+):(.+)$/);
-  if (!urlMatch) {
-    throw new Error('Invalid Xata database URL format');
+interface BulkUploadResponse {
+  success: boolean;
+  inserted: number;
+  errors: string[];
+  details?: {
+    total: number;
+    skipped: number;
+  };
+}
+
+// Mapping tabelle per validazione
+const VALID_TABLES = {
+  continents: ['name', 'code'],
+  countries: ['continent_id', 'name', 'code', 'flag_url'],
+  regions: ['country_id', 'name', 'type'],
+  cities: ['region_id', 'name', 'type', 'lat', 'lng', 'population'],
+  attractions: ['city_id', 'name', 'description', 'type', 'subtype', 'lat', 'lng', 'visit_duration', 'cost_range', 'image_url', 'is_active'],
+  events: ['city_id', 'name', 'description', 'recurrence_rule', 'season', 'duration', 'cost_range', 'image_url', 'is_active']
+};
+
+async function insertRecords(table: string, records: any[]): Promise<{ inserted: number; errors: string[] }> {
+  const errors: string[] = [];
+  let inserted = 0;
+
+  try {
+    // Headers per chiamata Xata
+    const headers = {
+      'Authorization': `Bearer ${process.env.XATA_API_KEY}`,
+      'Content-Type': 'application/json'
+    };
+
+    // URL base del database
+    const baseUrl = process.env.XATA_DATABASE_URL;
+    
+    if (!baseUrl || !process.env.XATA_API_KEY) {
+      throw new Error('Xata credentials non configurate');
+    }
+
+    // Inserisci ogni record singolarmente per migliore error handling
+    for (let i = 0; i < records.length; i++) {
+      const record = records[i];
+      
+      try {
+        // Valida campi richiesti
+        const requiredFields = getRequiredFields(table);
+        const missingFields = requiredFields.filter((field: any) => !record.hasOwnProperty(field));
+        
+        if (missingFields.length > 0) {
+          errors.push(`Record ${i + 1}: campi mancanti: ${missingFields.join(', ')}`);
+          continue;
+        }
+
+        // Chiama API Xata per inserimento
+        const response = await fetch(`${baseUrl}/tables/${table}/data`, {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify(record)
+        });
+
+        if (response.ok) {
+          inserted++;
+        } else {
+          const errorData = await response.text();
+          errors.push(`Record ${i + 1}: ${response.status} - ${errorData}`);
+        }
+
+      } catch (recordError: any) {
+        errors.push(`Record ${i + 1}: ${recordError.message}`);
+      }
+    }
+
+  } catch (globalError: any) {
+    errors.push(`Errore globale: ${globalError.message}`);
   }
 
-  const [, dbName, branch] = urlMatch;
-  const baseUrl = XATA_DATABASE_URL.replace(/\/db\/.*$/, '');
-  const endpoint = `/db/${dbName}:${branch}/tables/${tableName}/data`;
-  const url = `${baseUrl}${endpoint}`;
-  
-  console.log('🔗 Xata insert URL:', url);
-  console.log('📝 Record data:', recordData);
+  return { inserted, errors };
+}
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${XATA_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(recordData),
+function getRequiredFields(table: string): string[] {
+  // Campi obbligatori per ogni tabella
+  const requiredFields: any = {
+    continents: ['name', 'code'],
+    countries: ['continent_id', 'name', 'code'],
+    regions: ['country_id', 'name'],
+    cities: ['region_id', 'name', 'lat', 'lng'],
+    attractions: ['city_id', 'name', 'type', 'lat', 'lng'],
+    events: ['city_id', 'name', 'description']
+  };
+
+  return requiredFields[table] || [];
+}
+
+function validateTable(table: string): boolean {
+  return Object.keys(VALID_TABLES).includes(table);
+}
+
+function validateRecords(table: string, records: any[]): string[] {
+  const errors: string[] = [];
+
+  if (!Array.isArray(records)) {
+    errors.push('Data deve essere un array');
+    return errors;
+  }
+
+  if (records.length === 0) {
+    errors.push('Array vuoto - nessun record da inserire');
+    return errors;
+  }
+
+  if (records.length > 100) {
+    errors.push('Troppi records - massimo 100 per volta');
+    return errors;
+  }
+
+  // Valida struttura base dei records
+  records.forEach((record: any, index: any) => {
+    if (!record || typeof record !== 'object') {
+      errors.push(`Record ${index + 1}: deve essere un oggetto`);
+    }
   });
 
-  console.log('📡 Response status:', response.status);
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('❌ Xata error:', errorText);
-    throw new Error(`Xata API error: ${response.status} - ${errorText}`);
-  }
-
-  return response.json();
+  return errors;
 }
-
-// Validate table name
-const validTables = ['continents', 'countries', 'regions', 'cities', 'attractions', 'events'];
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { table, data }: { table: string; data: any[] } = body;
+    console.log('🔄 [Bulk Upload] Richiesta ricevuta');
 
-    console.log(`🚀 [Bulk Upload] Table: ${table}, Records: ${data?.length || 0}`);
+    const body: BulkUploadRequest = await request.json();
+    const { table, data } = body;
 
-    // Validation
-    if (!table || !validTables.includes(table)) {
+    if (!table || !data) {
       return NextResponse.json({
         success: false,
-        error: 'Invalid table name. Valid tables: ' + validTables.join(', ')
-      }, { status: 400 });
+        inserted: 0,
+        errors: ['Parametri table e data richiesti']
+      } as BulkUploadResponse, { status: 400 });
     }
 
-    if (!data || !Array.isArray(data) || data.length === 0) {
+    // Validazione tabella
+    if (!validateTable(table)) {
       return NextResponse.json({
         success: false,
-        error: 'Data must be a non-empty array'
-      }, { status: 400 });
+        inserted: 0,
+        errors: [`Tabella '${table}' non valida. Tabelle supportate: ${Object.keys(VALID_TABLES).join(', ')}`]
+      } as BulkUploadResponse, { status: 400 });
     }
 
-    if (data.length > 100) {
+    // Validazione records
+    const validationErrors = validateRecords(table, data);
+    if (validationErrors.length > 0) {
       return NextResponse.json({
         success: false,
-        error: 'Maximum 100 records per upload'
-      }, { status: 400 });
+        inserted: 0,
+        errors: validationErrors
+      } as BulkUploadResponse, { status: 400 });
     }
 
-    let insertedCount = 0;
-    const errors: string[] = [];
-    const insertedRecords: any[] = [];
+    console.log(`📊 [Bulk Upload] Inserendo ${data.length} records in tabella '${table}'`);
 
-    // Insert records one by one
-    for (let i = 0; i < data.length; i++) {
-      const record = data[i];
-      
-      try {
-        console.log(`📝 [Bulk Upload] Inserting record ${i + 1}/${data.length}`);
-        
-        // Validate record is object
-        if (!record || typeof record !== 'object') {
-          throw new Error('Record must be an object');
-        }
+    // Inserimento records
+    const result = await insertRecords(table, data);
 
-        // Insert to Xata
-        const insertResult = await xataInsert(table, record);
-        
-        insertedCount++;
-        insertedRecords.push(insertResult);
-        
-        console.log(`✅ [Bulk Upload] Inserted record ${i + 1}: ID ${insertResult.id}`);
-        
-      } catch (error: any) {
-        const errorMsg = `Record ${i + 1}: ${error.message}`;
-        errors.push(errorMsg);
-        console.error(`❌ [Bulk Upload] ${errorMsg}`);
-      }
-    }
-
-    const result = {
-      success: insertedCount > 0,
-      inserted: insertedCount,
-      errors,
+    const response: BulkUploadResponse = {
+      success: result.inserted > 0,
+      inserted: result.inserted,
+      errors: result.errors,
       details: {
         total: data.length,
-        failed: errors.length,
-        table: table
-      },
-      insertedRecords: insertedRecords.slice(0, 3) // Return first 3 for verification
+        skipped: data.length - result.inserted
+      }
     };
 
-    console.log(`🎉 [Bulk Upload] Complete: ${insertedCount}/${data.length} inserted`);
+    console.log(`✅ [Bulk Upload] Completato: ${result.inserted}/${data.length} inseriti`);
 
-    return NextResponse.json(result);
+    return NextResponse.json(response);
 
-  } catch (error: unknown) {
-    const err = error as Error;
-    console.error('❌ [Bulk Upload] API error:', err.message);
-    
+  } catch (error: any) {
+    console.error('❌ [Bulk Upload] Errore:', error);
+
     return NextResponse.json({
       success: false,
       inserted: 0,
-      errors: [err.message],
-      details: {
-        error: 'API_ERROR'
-      }
-    }, { status: 500 });
+      errors: [error.message || 'Errore interno del server']
+    } as BulkUploadResponse, { status: 500 });
   }
 }
 
-// GET - Info about available tables
+// GET per info API
 export async function GET() {
   return NextResponse.json({
-    success: true,
-    availableTables: validTables,
-    maxRecordsPerUpload: 100,
-    supportedFormats: ['JSON array'],
-    endpoint: '/api/admin/bulk-upload',
-    usage: {
-      method: 'POST',
-      body: {
-        table: 'table_name',
-        data: '[{record1}, {record2}]'
-      }
+    endpoint: 'Bulk Upload API',
+    version: '1.0',
+    supportedTables: Object.keys(VALID_TABLES),
+    maxRecords: 100,
+    method: 'POST',
+    bodyExample: {
+      table: 'attractions',
+      data: [
+        {
+          city_id: 1,
+          name: 'Colosseo',
+          description: 'Anfiteatro Romano',
+          type: 'monument',
+          lat: 41.8902,
+          lng: 12.4922,
+          is_active: true
+        }
+      ]
     }
   });
 }
