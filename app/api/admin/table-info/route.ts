@@ -1,4 +1,4 @@
-// app/api/admin/table-info/route.ts - Metodo veloce e intelligente
+// app/api/admin/table-info/route.ts - Versione corretta con Summarize
 import { NextRequest, NextResponse } from 'next/server';
 
 const XATA_API_KEY = process.env.XATA_API_KEY;
@@ -29,16 +29,51 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
+    // FASE 1: Count ESATTO e VELOCE con Summarize (come nel tuo esempio)
+    const summarizeUrl = `${XATA_DATABASE_URL}/tables/${table}/summarize`;
+    
+    console.log('Getting exact count for table:', table);
+
+    const countResponse = await fetch(summarizeUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${XATA_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        summaries: {
+          total_rows: {
+            count: "*"  // Esattamente come nel tuo esempio
+          }
+        }
+      })
+    });
+
+    if (!countResponse.ok) {
+      const errorText = await countResponse.text();
+      console.log('Summarize error:', errorText);
+      
+      return NextResponse.json({
+        tableName: table,
+        totalRows: 0,
+        lastRows: [],
+        success: false,
+        error: `Summarize API error: ${countResponse.status} - ${errorText}`
+      }, { status: 500 });
+    }
+
+    const countData: any = await countResponse.json();
+    console.log('Summarize response:', JSON.stringify(countData, null, 2));
+    
+    // Accesso corretto al risultato (come nel tuo esempio)
+    const totalRows = countData.records?.[0]?.total_rows || 0;
+    
+    console.log('Exact count result:', totalRows);
+
+    // FASE 2: Prendi le ultime 10 righe
     const queryUrl = `${XATA_DATABASE_URL}/tables/${table}/query`;
     
-    console.log('Getting smart count for table:', table);
-
-    // STRATEGIA VELOCE: 
-    // 1. Prendi una pagina grande (200 records)
-    // 2. Se è piena, fai binary search per stimare il totale
-    // 3. Se non è piena, quello è il totale esatto
-    
-    const response = await fetch(queryUrl, {
+    const rowsResponse = await fetch(queryUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${XATA_API_KEY}`,
@@ -49,54 +84,29 @@ export async function GET(request: NextRequest) {
           { "xata.createdAt": "desc" }
         ],
         page: {
-          size: 200 // Pagina grande per efficienza
+          size: 10
         }
       })
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.log('Query error:', errorText);
-      
-      return NextResponse.json({
-        tableName: table,
-        totalRows: 0,
-        lastRows: [],
-        success: false,
-        error: `Errore API: ${response.status} - ${errorText}`
-      }, { status: 500 });
-    }
-
-    const data: any = await response.json();
-    const records = data.records || [];
-    const hasMore = data.meta?.page?.more || false;
+    let lastRows: any[] = [];
     
-    console.log(`Prima pagina: ${records.length} records, hasMore: ${hasMore}`);
-
-    let totalRows: number | string;
-    
-    if (!hasMore) {
-      // Caso semplice: meno di 200 records, questo è il totale esatto
-      totalRows = records.length;
-      console.log(`Totale esatto: ${totalRows}`);
+    if (rowsResponse.ok) {
+      const rowsData: any = await rowsResponse.json();
+      lastRows = rowsData.records || [];
+      console.log('Got', lastRows.length, 'recent rows');
     } else {
-      // Caso complesso: più di 200 records
-      // Facciamo una stima veloce con offset
-      totalRows = await estimateTotal(table, records.length);
+      console.log('Could not get recent rows, but count succeeded');
     }
-
-    // Prendi le ultime 10 righe
-    const lastRows = records.slice(0, 10);
 
     return NextResponse.json({
       tableName: table,
-      totalRows,
+      totalRows, // Numero ESATTO dal summarize!
       lastRows,
       success: true,
       debug: {
-        firstPageSize: records.length,
-        hasMore,
-        method: hasMore ? 'estimated' : 'exact'
+        method: 'summarize',
+        rawCountData: countData // Debug per vedere la struttura
       }
     });
 
@@ -110,56 +120,5 @@ export async function GET(request: NextRequest) {
       success: false,
       error: `Errore interno: ${error instanceof Error ? error.message : 'Sconosciuto'}`
     }, { status: 500 });
-  }
-}
-
-// Funzione per stimare il totale velocemente
-async function estimateTotal(table: string, firstPageSize: number): Promise<number | string> {
-  try {
-    const queryUrl = `${XATA_DATABASE_URL}/tables/${table}/query`;
-    
-    // Prova offset a 500, 1000, 2000 per capire la dimensione
-    const testOffsets = [500, 1000, 2000];
-    
-    for (const offset of testOffsets) {
-      console.log(`Testing offset ${offset}...`);
-      
-      const response = await fetch(queryUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${XATA_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          page: {
-            size: 10, // Solo un piccolo sample
-            offset: offset
-          }
-        })
-      });
-
-      if (!response.ok) {
-        console.log(`Offset ${offset} failed, assuming table is smaller`);
-        return firstPageSize + '+';
-      }
-
-      const data: any = await response.json();
-      const records = data.records || [];
-      
-      if (records.length === 0) {
-        // Trovato il limite! Il totale è tra l'offset precedente e questo
-        const prevOffset = testOffsets[testOffsets.indexOf(offset) - 1] || 0;
-        console.log(`Table size is between ${prevOffset} and ${offset}`);
-        return `~${offset}`;
-      }
-    }
-    
-    // Se arriviamo qui, la tabella ha più di 2000 records
-    console.log('Table has more than 2000 records');
-    return '2000+';
-    
-  } catch (error) {
-    console.log('Estimation failed:', error);
-    return firstPageSize + '+';
   }
 }
