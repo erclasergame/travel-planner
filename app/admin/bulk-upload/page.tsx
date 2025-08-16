@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Upload, Database, Loader2, Eye, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import TableInfoPanel from '@/components/TableInfoPanel';
 
 export default function BulkUploadPage() {
   const [jsonData, setJsonData] = useState('');
@@ -230,17 +231,7 @@ export default function BulkUploadPage() {
 
           <div className="space-y-6">
             
-            <div className="bg-white rounded-2xl shadow-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                ℹ️ Info Tabella
-              </h3>
-              <div>
-                <span className="text-sm text-gray-600">Selezionata:</span>
-                <p className="font-semibold text-purple-600">
-                  {tables.find((t: any) => t.value === selectedTable)?.label}
-                </p>
-              </div>
-            </div>
+            <TableInfoPanel selectedTable={selectedTable} />
 
             {result && (
               <div className={`bg-white rounded-2xl shadow-xl p-6 border-l-4 ${
