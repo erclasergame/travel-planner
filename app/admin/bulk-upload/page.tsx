@@ -114,8 +114,8 @@ const BulkUploadPage = () => {
 
   // Load example data
   const loadExample = () => {
-    const examples: any = {
-      attractions: JSON.stringify([
+    if (selectedTable === 'attractions') {
+      setJsonData(JSON.stringify([
         {
           city_id: 1,
           name: "Esempio Attrazione",
@@ -129,8 +129,9 @@ const BulkUploadPage = () => {
           image_url: "https://images.unsplash.com/photo-1552832230-c0197dd311b5",
           is_active: true
         }
-      ], null, 2),
-      events: JSON.stringify([
+      ], null, 2));
+    } else if (selectedTable === 'events') {
+      setJsonData(JSON.stringify([
         {
           city_id: 1,
           name: "Esempio Evento",
@@ -142,8 +143,9 @@ const BulkUploadPage = () => {
           image_url: "https://images.unsplash.com/photo-1541961017774-22349e4a1262",
           is_active: true
         }
-      ], null, 2),
-      cities: JSON.stringify([
+      ], null, 2));
+    } else if (selectedTable === 'cities') {
+      setJsonData(JSON.stringify([
         {
           region_id: 1,
           name: "Milano",
@@ -152,11 +154,7 @@ const BulkUploadPage = () => {
           lng: 9.1900,
           population: 1400000
         }
-      ], null, 2)
-    };
-
-    if (examples[selectedTable]) {
-      setJsonData(examples[selectedTable]);
+      ], null, 2));
     }
   };
 
@@ -164,7 +162,6 @@ const BulkUploadPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       <div className="max-w-6xl mx-auto pt-8">
         
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-4 flex items-center justify-center">
             <Database className="h-10 w-10 mr-3 text-purple-600" />
@@ -175,11 +172,9 @@ const BulkUploadPage = () => {
 
         <div className="grid lg:grid-cols-3 gap-8">
           
-          {/* Left Panel - Form */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-xl p-8">
               
-              {/* Table Selection */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Seleziona Tabella Destinazione
@@ -197,7 +192,6 @@ const BulkUploadPage = () => {
                 </select>
               </div>
 
-              {/* JSON Input */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-sm font-medium text-gray-700">
@@ -233,7 +227,6 @@ const BulkUploadPage = () => {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex space-x-4">
                 <button
                   onClick={handlePreview}
@@ -264,7 +257,6 @@ const BulkUploadPage = () => {
               </div>
             </div>
 
-            {/* Preview Panel */}
             {showPreview && preview.length > 0 && (
               <div className="mt-6 bg-white rounded-2xl shadow-xl p-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">
@@ -285,10 +277,8 @@ const BulkUploadPage = () => {
             )}
           </div>
 
-          {/* Right Panel - Info & Results */}
           <div className="space-y-6">
             
-            {/* Table Info */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">
                 ℹ️ Informazioni Tabella
@@ -304,7 +294,6 @@ const BulkUploadPage = () => {
               </div>
             </div>
 
-            {/* Upload Result */}
             {result && (
               <div className={`bg-white rounded-2xl shadow-xl p-6 border-l-4 ${
                 result.success ? 'border-green-500' : 'border-red-500'
@@ -349,7 +338,6 @@ const BulkUploadPage = () => {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-500">
           <p>
             💡 <strong>Suggerimento:</strong> Prepara i tuoi dati in formato JSON array, 
