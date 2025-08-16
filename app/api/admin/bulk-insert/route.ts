@@ -221,9 +221,25 @@ function generateBulkInsertSQL(table: string, data: any[], onConflict: string): 
       throw new Error(`Unsupported table: ${table}`);
   }
 
-  // Genera VALUES clause
-  const values: any[] = [];
-  const valuePlaceholders = data.map((record, index) => {
+  // Helper per escape valori SQL
+  const escapeValue = (value: any): string => {
+    if (value === null || value === undefined) {
+      return 'NULL';
+    }
+    if (typeof value === 'string') {
+      return `'${value.replace(/'/g, "''")}'`; // Escape single quotes
+    }
+    if (typeof value === 'boolean') {
+      return value ? 'true' : 'false';
+    }
+    if (typeof value === 'number') {
+      return value.toString();
+    }
+    return `'${String(value).replace(/'/g, "''")}'`;
+  };
+
+  // Genera VALUES clause con valori letterali
+  const valuePlaceholders = data.map((record) => {
     const recordValues = columns.map(col => {
       let value = record[col];
       
@@ -237,8 +253,7 @@ function generateBulkInsertSQL(table: string, data: any[], onConflict: string): 
         value = true;
       }
       
-      values.push(value);
-      return `$${values.length}`;
+      return escapeValue(value);
     });
     
     return `(${recordValues.join(', ')})`;
@@ -266,7 +281,7 @@ function generateBulkInsertSQL(table: string, data: any[], onConflict: string): 
     ${conflictClause}
   `.trim();
 
-  return { sql, values }; 
+  return { sql, values: [] }; // Nessun parametro separato, tutto nel SQL
 }
 
 // Endpoint GET per ottenere info sulla struttura
