@@ -266,7 +266,7 @@ function generateBulkInsertSQL(table: string, data: any[], onConflict: string): 
     ${conflictClause}
   `.trim();
 
-  return { sql, values };
+  return { sql, values }; 
 }
 
 // Endpoint GET per ottenere info sulla struttura
