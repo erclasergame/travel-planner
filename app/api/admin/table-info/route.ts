@@ -1,4 +1,4 @@
-// app/api/admin/table-info/route.ts - Versione con API Base Xata
+// app/api/admin/table-info/route.ts - Con URL format corretto
 import { NextRequest, NextResponse } from 'next/server';
 
 const XATA_API_KEY = process.env.XATA_API_KEY;
@@ -29,17 +29,27 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Usa API base di Xata: GET /tables/{table}/records
-    const baseUrl = `${XATA_DATABASE_URL}/tables/${table}/records`;
+    // URL format corretto come negli altri endpoint funzionanti
+    // XATA_DATABASE_URL include già il path completo
+    const recordsUrl = `${XATA_DATABASE_URL}/tables/${table}/query`;
     
-    // Chiamata per ottenere i primi records e stimare il totale
-    const response = await fetch(`${baseUrl}?page[size]=20`, {
-      method: 'GET',
+    console.log('Calling URL:', recordsUrl);
+
+    // Usa POST /query invece di GET /records (come negli altri endpoint)
+    const response = await fetch(recordsUrl, {
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${XATA_API_KEY}`,
         'Content-Type': 'application/json',
-      }
+      },
+      body: JSON.stringify({
+        page: {
+          size: 20
+        }
+      })
     });
+
+    console.log('Response status:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -50,28 +60,26 @@ export async function GET(request: NextRequest) {
         totalRows: 0,
         lastRows: [],
         success: false,
-        error: `Errore API Xata: ${response.status} - ${errorText}`
+        error: `Errore API: ${response.status} - ${errorText}`
       }, { status: 500 });
     }
 
     const data: any = await response.json();
-    console.log('Xata response:', data);
+    console.log('Success response:', JSON.stringify(data, null, 2));
 
-    // Estrai i records
+    // Estrai i records dalla risposta
     const records = data.records || [];
     
-    // Per il conteggio totale, usiamo una stima basata sui records disponibili
-    // Se abbiamo meno di 20 records, quello è il totale
-    // Se abbiamo esattamente 20, potrebbe esserci di più (stima approssimativa)
+    // Stima del totale basata sui records disponibili
     const hasMore = data.meta?.page?.more || false;
-    const totalRows = hasMore ? records.length + '+' : records.length;
+    const totalRows = hasMore ? `${records.length}+` : records.length;
 
-    // Prendi solo gli ultimi 10 records (o meno se ce ne sono meno)
+    // Prendi solo i primi 10 records
     const lastRows = records.slice(0, 10);
 
     return NextResponse.json({
       tableName: table,
-      totalRows: hasMore ? `${records.length}+` : records.length,
+      totalRows,
       lastRows,
       success: true
     });
