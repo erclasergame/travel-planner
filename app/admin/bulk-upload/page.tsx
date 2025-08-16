@@ -34,7 +34,7 @@ export default function BulkUploadPage() {
 
   function handlePreview() {
     const validation = validateJson(jsonData);
-    if (validation.valid) {
+    if (validation.valid && validation.data) {
       setPreview(validation.data);
       setShowPreview(true);
     } else {
