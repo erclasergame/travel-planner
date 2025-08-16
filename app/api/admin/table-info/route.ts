@@ -1,4 +1,4 @@
-// app/api/admin/table-info/route.ts - Versione corretta con Summarize
+// app/api/admin/table-info/route.ts - Versione DEBUG COMPLETA
 import { NextRequest, NextResponse } from 'next/server';
 
 const XATA_API_KEY = process.env.XATA_API_KEY;
@@ -8,6 +8,11 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const table = searchParams.get('table');
+
+    console.log('=== DEBUG START ===');
+    console.log('Table requested:', table);
+    console.log('XATA_API_KEY exists:', !!XATA_API_KEY);
+    console.log('XATA_DATABASE_URL:', XATA_DATABASE_URL);
 
     if (!table) {
       return NextResponse.json({
@@ -29,10 +34,49 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // FASE 1: Count ESATTO e VELOCE con Summarize (come nel tuo esempio)
-    const summarizeUrl = `${XATA_DATABASE_URL}/tables/${table}/summarize`;
+    // TEST 1: Prova prima con il metodo query normale per vedere se funziona
+    const queryUrl = `${XATA_DATABASE_URL}/tables/${table}/query`;
+    console.log('Testing query URL:', queryUrl);
     
-    console.log('Getting exact count for table:', table);
+    const testResponse = await fetch(queryUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${XATA_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        page: { size: 5 }
+      })
+    });
+
+    console.log('Query test status:', testResponse.status);
+    
+    if (testResponse.ok) {
+      const testData: any = await testResponse.json();
+      console.log('Query test SUCCESS. Records found:', testData.records?.length || 0);
+      console.log('Query test data structure:', Object.keys(testData));
+      
+      if (testData.records && testData.records.length > 0) {
+        console.log('Sample record:', testData.records[0]);
+      }
+    } else {
+      const testError = await testResponse.text();
+      console.log('Query test FAILED:', testError);
+    }
+
+    // TEST 2: Ora prova summarize
+    const summarizeUrl = `${XATA_DATABASE_URL}/tables/${table}/summarize`;
+    console.log('Testing summarize URL:', summarizeUrl);
+    
+    const summarizeBody = {
+      summaries: {
+        total_rows: {
+          count: "*"
+        }
+      }
+    };
+    
+    console.log('Summarize request body:', JSON.stringify(summarizeBody, null, 2));
 
     const countResponse = await fetch(summarizeUrl, {
       method: 'POST',
@@ -40,85 +84,60 @@ export async function GET(request: NextRequest) {
         'Authorization': `Bearer ${XATA_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        summaries: {
-          total_rows: {
-            count: "*"  // Esattamente come nel tuo esempio
-          }
-        }
-      })
+      body: JSON.stringify(summarizeBody)
     });
 
-    if (!countResponse.ok) {
-      const errorText = await countResponse.text();
-      console.log('Summarize error:', errorText);
-      
-      return NextResponse.json({
-        tableName: table,
-        totalRows: 0,
-        lastRows: [],
-        success: false,
-        error: `Summarize API error: ${countResponse.status} - ${errorText}`
-      }, { status: 500 });
-    }
+    console.log('Summarize response status:', countResponse.status);
+    console.log('Summarize response headers:', Object.fromEntries(countResponse.headers.entries()));
 
-    const countData: any = await countResponse.json();
-    console.log('Summarize response:', JSON.stringify(countData, null, 2));
-    
-    // Accesso corretto al risultato (come nel tuo esempio)
-    const totalRows = countData.records?.[0]?.total_rows || 0;
-    
-    console.log('Exact count result:', totalRows);
+    const countResponseText = await countResponse.text();
+    console.log('Summarize raw response:', countResponseText);
 
-    // FASE 2: Prendi le ultime 10 righe
-    const queryUrl = `${XATA_DATABASE_URL}/tables/${table}/query`;
-    
-    const rowsResponse = await fetch(queryUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${XATA_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        sort: [
-          { "xata.createdAt": "desc" }
-        ],
-        page: {
-          size: 10
-        }
-      })
-    });
+    let countData: any = {};
+    let totalRows = 0;
 
-    let lastRows: any[] = [];
-    
-    if (rowsResponse.ok) {
-      const rowsData: any = await rowsResponse.json();
-      lastRows = rowsData.records || [];
-      console.log('Got', lastRows.length, 'recent rows');
+    if (countResponse.ok) {
+      try {
+        countData = JSON.parse(countResponseText);
+        console.log('Summarize parsed data:', JSON.stringify(countData, null, 2));
+        
+        totalRows = countData.records?.[0]?.total_rows || 0;
+        console.log('Extracted total_rows:', totalRows);
+      } catch (parseError) {
+        console.log('Failed to parse summarize response:', parseError);
+      }
     } else {
-      console.log('Could not get recent rows, but count succeeded');
+      console.log('Summarize FAILED with status:', countResponse.status);
     }
 
     return NextResponse.json({
       tableName: table,
-      totalRows, // Numero ESATTO dal summarize!
-      lastRows,
-      success: true,
+      totalRows,
+      lastRows: [], // Vuoto per ora, focus sul debug count
+      success: countResponse.ok,
       debug: {
-        method: 'summarize',
-        rawCountData: countData // Debug per vedere la struttura
+        queryTest: testResponse.ok,
+        summarizeStatus: countResponse.status,
+        summarizeRawResponse: countResponseText,
+        countData,
+        extractedTotal: totalRows,
+        summarizeUrl,
+        requestBody: summarizeBody
       }
     });
 
   } catch (error) {
-    console.error('Errore completo:', error);
+    console.error('=== DEBUG ERROR ===', error);
     
     return NextResponse.json({
       tableName: '',
       totalRows: 0,
       lastRows: [],
       success: false,
-      error: `Errore interno: ${error instanceof Error ? error.message : 'Sconosciuto'}`
+      error: `Debug error: ${error instanceof Error ? error.message : 'Sconosciuto'}`,
+      debug: {
+        errorStack: error instanceof Error ? error.stack : undefined
+      }
     }, { status: 500 });
   }
 }
