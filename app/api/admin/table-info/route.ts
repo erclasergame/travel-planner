@@ -1,4 +1,4 @@
-// app/api/admin/table-info/route.ts - Versione Debug Semplificata
+// app/api/admin/table-info/route.ts - Versione con API Base Xata
 import { NextRequest, NextResponse } from 'next/server';
 
 const XATA_API_KEY = process.env.XATA_API_KEY;
@@ -8,11 +8,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const table = searchParams.get('table');
-
-    // Debug: Log delle variabili
-    console.log('Table requested:', table);
-    console.log('XATA_API_KEY exists:', !!XATA_API_KEY);
-    console.log('XATA_DATABASE_URL:', XATA_DATABASE_URL?.substring(0, 50) + '...');
 
     if (!table) {
       return NextResponse.json({
@@ -30,54 +25,54 @@ export async function GET(request: NextRequest) {
         totalRows: 0,
         lastRows: [],
         success: false,
-        error: `Configurazione mancante - API_KEY: ${!!XATA_API_KEY}, URL: ${!!XATA_DATABASE_URL}`
+        error: 'Configurazione database mancante'
       }, { status: 500 });
     }
 
-    // Test semplice: prima proviamo solo a contare
-    const baseUrl = `${XATA_DATABASE_URL}/tables/${table}`;
-    console.log('Calling URL:', baseUrl + '/aggregate');
+    // Usa API base di Xata: GET /tables/{table}/records
+    const baseUrl = `${XATA_DATABASE_URL}/tables/${table}/records`;
     
-    const countResponse = await fetch(`${baseUrl}/aggregate`, {
-      method: 'POST',
+    // Chiamata per ottenere i primi records e stimare il totale
+    const response = await fetch(`${baseUrl}?page[size]=20`, {
+      method: 'GET',
       headers: {
         'Authorization': `Bearer ${XATA_API_KEY}`,
         'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        aggs: {
-          total: {
-            count: "*"
-          }
-        }
-      })
+      }
     });
 
-    console.log('Count response status:', countResponse.status);
-    
-    if (!countResponse.ok) {
-      const errorText = await countResponse.text();
-      console.log('Count error text:', errorText);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log('Error response:', errorText);
       
       return NextResponse.json({
         tableName: table,
         totalRows: 0,
         lastRows: [],
         success: false,
-        error: `Errore conteggio: ${countResponse.status} - ${errorText}`
+        error: `Errore API Xata: ${response.status} - ${errorText}`
       }, { status: 500 });
     }
 
-    const countData: any = await countResponse.json();
-    console.log('Count data:', countData);
-    
-    const totalRows = countData.aggs?.total || 0;
+    const data: any = await response.json();
+    console.log('Xata response:', data);
 
-    // Per ora ritorniamo solo il conteggio, senza le righe
+    // Estrai i records
+    const records = data.records || [];
+    
+    // Per il conteggio totale, usiamo una stima basata sui records disponibili
+    // Se abbiamo meno di 20 records, quello è il totale
+    // Se abbiamo esattamente 20, potrebbe esserci di più (stima approssimativa)
+    const hasMore = data.meta?.page?.more || false;
+    const totalRows = hasMore ? records.length + '+' : records.length;
+
+    // Prendi solo gli ultimi 10 records (o meno se ce ne sono meno)
+    const lastRows = records.slice(0, 10);
+
     return NextResponse.json({
       tableName: table,
-      totalRows,
-      lastRows: [], // Vuoto per ora
+      totalRows: hasMore ? `${records.length}+` : records.length,
+      lastRows,
       success: true
     });
 
