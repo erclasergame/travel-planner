@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Search, Settings, Zap, DollarSign, CheckCircle, ArrowLeft, AlertCircle, Loader2, RefreshCw, Globe, Shield } from 'lucide-react';
+import { Search, Settings, Zap, DollarSign, CheckCircle, ArrowLeft, AlertCircle, Loader2, RefreshCw, Globe, Shield, Database as DatabaseIcon, Upload } from 'lucide-react';
+import Link from 'next/link';
 
 const SettingsPage = () => {
   type CategoryType = 'free' | 'cheap' | 'premium';
@@ -179,27 +180,43 @@ const SettingsPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-4xl mx-auto pt-8">
-        {/* Header */}
+        {/* AGGIORNATO: Header con navigation admin */}
         <div className="flex items-center justify-between mb-8">
-          <a 
-            href="/"
-            className="flex items-center text-gray-600 hover:text-gray-800"
+          <Link 
+            href="/admin"
+            className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
           >
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            Torna al Travel Planner
-          </a>
+            <Shield className="h-5 w-5 mr-2" />
+            Dashboard Admin
+          </Link>
           <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-            <Shield className="h-8 w-8 mr-3 text-blue-600" />
+            <Settings className="h-8 w-8 mr-3 text-blue-600" />
             ⚙️ Admin Settings
           </h1>
-          <button
-            onClick={loadModels}
-            disabled={loading}
-            className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-sm"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Aggiorna
-          </button>
+          <div className="flex space-x-2">
+            <Link
+              href="/admin/database"
+              className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+            >
+              <DatabaseIcon className="h-4 w-4" />
+              <span>Database</span>
+            </Link>
+            <Link
+              href="/admin/bulk-upload"
+              className="flex items-center space-x-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+            >
+              <Upload className="h-4 w-4" />
+              <span>Upload</span>
+            </Link>
+            <button
+              onClick={loadModels}
+              disabled={loading}
+              className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-sm"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Aggiorna
+            </button>
+          </div>
         </div>
 
         {/* ✅ NUOVO: Info sistema globale */}
@@ -486,6 +503,16 @@ const SettingsPage = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Footer con link Travel Planner */}
+        <div className="mt-8 pt-6 border-t text-center">
+          <Link 
+            href="/"
+            className="text-blue-600 hover:text-blue-800 font-medium"
+          >
+            ← Torna al Travel Planner
+          </Link>
         </div>
       </div>
     </div>
