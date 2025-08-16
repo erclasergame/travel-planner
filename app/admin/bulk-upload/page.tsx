@@ -8,8 +8,8 @@ export default function BulkUploadPage() {
   const [selectedTable, setSelectedTable] = useState('attractions');
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [preview, setPreview] = useState([]);
-  const [result, setResult] = useState(null);
+  const [preview, setPreview] = useState<any[]>([]);
+  const [result, setResult] = useState<any>(null);
 
   const tables = [
     { value: 'continents', label: 'Continenti' },
@@ -20,14 +20,14 @@ export default function BulkUploadPage() {
     { value: 'events', label: 'Eventi' }
   ];
 
-  function validateJson(text) {
+  function validateJson(text: string) {
     try {
       const parsed = JSON.parse(text);
       if (!Array.isArray(parsed)) {
         throw new Error('JSON deve essere un array');
       }
       return { valid: true, data: parsed, error: null };
-    } catch (error) {
+    } catch (error: any) {
       return { valid: false, data: null, error: error.message };
     }
   }
@@ -141,7 +141,7 @@ export default function BulkUploadPage() {
                   onChange={(e) => setSelectedTable(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500"
                 >
-                  {tables.map((table) => (
+                  {tables.map((table: any) => (
                     <option key={table.value} value={table.value}>
                       {table.label}
                     </option>
@@ -237,7 +237,7 @@ export default function BulkUploadPage() {
               <div>
                 <span className="text-sm text-gray-600">Selezionata:</span>
                 <p className="font-semibold text-purple-600">
-                  {tables.find(t => t.value === selectedTable)?.label}
+                  {tables.find((t: any) => t.value === selectedTable)?.label}
                 </p>
               </div>
             </div>
@@ -265,7 +265,7 @@ export default function BulkUploadPage() {
                     <div>
                       <span className="text-sm text-gray-600">Errori:</span>
                       <div className="mt-2 max-h-32 overflow-y-auto">
-                        {result.errors.map((error, index) => (
+                        {result.errors.map((error: any, index: any) => (
                           <p key={index} className="text-xs text-red-600 bg-red-50 p-2 rounded mb-1">
                             {error}
                           </p>
