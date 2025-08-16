@@ -1,5 +1,7 @@
+"use client";
+
 import React, { useState, useRef } from 'react';
-import { Upload, Play, Pause, RotateCcw, Database, FileSpreadsheet, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Upload, Play, RotateCcw, Database, FileSpreadsheet, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 
 interface InsertResult {
   total_records: number;
@@ -204,7 +206,7 @@ const BulkInsertAdmin = () => {
         
         if (result.results.errors.length > 0) {
           addLog(`⚠️ ${result.results.errors.length} errori riscontrati`);
-          result.results.errors.forEach(error => addLog(`   • ${error}`));
+          result.results.errors.forEach((error: string) => addLog(`   • ${error}`));
         }
       } else {
         throw new Error(result.error || 'Errore sconosciuto');
