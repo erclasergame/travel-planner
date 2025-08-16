@@ -1,50 +1,43 @@
-// app/api/admin/table-info/route.ts
+// app/api/admin/table-info/route.ts - Versione Debug Semplificata
 import { NextRequest, NextResponse } from 'next/server';
-
-interface XataRecord {
-  id: string;
-  [key: string]: any;
-}
-
-interface TableInfo {
-  tableName: string;
-  totalRows: number;
-  lastRows: XataRecord[];
-  success: boolean;
-  error?: string;
-}
 
 const XATA_API_KEY = process.env.XATA_API_KEY;
 const XATA_DATABASE_URL = process.env.XATA_DATABASE_URL;
 
-export async function GET(request: NextRequest): Promise<NextResponse<TableInfo>> {
-  const { searchParams } = new URL(request.url);
-  const table = searchParams.get('table');
-
-  if (!table) {
-    return NextResponse.json({
-      tableName: '',
-      totalRows: 0,
-      lastRows: [],
-      success: false,
-      error: 'Nome tabella mancante'
-    }, { status: 400 });
-  }
-
-  if (!XATA_API_KEY || !XATA_DATABASE_URL) {
-    return NextResponse.json({
-      tableName: table,
-      totalRows: 0,
-      lastRows: [],
-      success: false,
-      error: 'Configurazione database mancante'
-    }, { status: 500 });
-  }
-
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const table = searchParams.get('table');
+
+    // Debug: Log delle variabili
+    console.log('Table requested:', table);
+    console.log('XATA_API_KEY exists:', !!XATA_API_KEY);
+    console.log('XATA_DATABASE_URL:', XATA_DATABASE_URL?.substring(0, 50) + '...');
+
+    if (!table) {
+      return NextResponse.json({
+        tableName: '',
+        totalRows: 0,
+        lastRows: [],
+        success: false,
+        error: 'Nome tabella mancante'
+      }, { status: 400 });
+    }
+
+    if (!XATA_API_KEY || !XATA_DATABASE_URL) {
+      return NextResponse.json({
+        tableName: table,
+        totalRows: 0,
+        lastRows: [],
+        success: false,
+        error: `Configurazione mancante - API_KEY: ${!!XATA_API_KEY}, URL: ${!!XATA_DATABASE_URL}`
+      }, { status: 500 });
+    }
+
+    // Test semplice: prima proviamo solo a contare
     const baseUrl = `${XATA_DATABASE_URL}/tables/${table}`;
+    console.log('Calling URL:', baseUrl + '/aggregate');
     
-    // Chiamata per contare il totale delle righe
     const countResponse = await fetch(`${baseUrl}/aggregate`, {
       method: 'POST',
       headers: {
@@ -60,53 +53,43 @@ export async function GET(request: NextRequest): Promise<NextResponse<TableInfo>
       })
     });
 
+    console.log('Count response status:', countResponse.status);
+    
     if (!countResponse.ok) {
-      throw new Error(`Errore nel conteggio: ${countResponse.status}`);
+      const errorText = await countResponse.text();
+      console.log('Count error text:', errorText);
+      
+      return NextResponse.json({
+        tableName: table,
+        totalRows: 0,
+        lastRows: [],
+        success: false,
+        error: `Errore conteggio: ${countResponse.status} - ${errorText}`
+      }, { status: 500 });
     }
 
-    const countData = await countResponse.json();
+    const countData: any = await countResponse.json();
+    console.log('Count data:', countData);
+    
     const totalRows = countData.aggs?.total || 0;
 
-    // Chiamata per ottenere le ultime 10 righe
-    const rowsResponse = await fetch(`${baseUrl}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${XATA_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        sort: [
-          { "xata.createdAt": "desc" }
-        ],
-        page: {
-          size: 10
-        }
-      })
-    });
-
-    if (!rowsResponse.ok) {
-      throw new Error(`Errore nel recupero righe: ${rowsResponse.status}`);
-    }
-
-    const rowsData = await rowsResponse.json();
-    const lastRows = rowsData.records || [];
-
+    // Per ora ritorniamo solo il conteggio, senza le righe
     return NextResponse.json({
       tableName: table,
       totalRows,
-      lastRows,
+      lastRows: [], // Vuoto per ora
       success: true
     });
 
   } catch (error) {
-    console.error('Errore recupero info tabella:', error);
+    console.error('Errore completo:', error);
     
     return NextResponse.json({
-      tableName: table,
+      tableName: '',
       totalRows: 0,
       lastRows: [],
       success: false,
-      error: error instanceof Error ? error.message : 'Errore sconosciuto'
+      error: `Errore interno: ${error instanceof Error ? error.message : 'Sconosciuto'}`
     }, { status: 500 });
   }
 }
