@@ -1,4 +1,4 @@
-// app/api/admin/table-info/route.ts - Con conteggio preciso
+// app/api/admin/table-info/route.ts - Versione VELOCE con Summarize API
 import { NextRequest, NextResponse } from 'next/server';
 
 const XATA_API_KEY = process.env.XATA_API_KEY;
@@ -29,92 +29,75 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    const recordsUrl = `${XATA_DATABASE_URL}/tables/${table}/query`;
+    // FASE 1: Count veloce con Summarize API
+    const summarizeUrl = `${XATA_DATABASE_URL}/tables/${table}/summarize`;
     
-    // FASE 1: Conta tutte le righe paginando
-    let totalCount = 0;
-    let allRecords: any[] = [];
-    let cursor: string | undefined = undefined;
-    let iterations = 0;
-    const maxIterations = 20; // Protezione anti-loop infinito
+    console.log('Getting fast count for table:', table);
 
-    console.log('Iniziando conteggio preciso per tabella:', table);
-
-    do {
-      const queryBody: any = {
-        page: {
-          size: 100 // Pagine grandi per efficienza
+    const countResponse = await fetch(summarizeUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${XATA_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        columns: [], // No grouping = data from entire table
+        summaries: {
+          total: {
+            count: "*" // Count all records (including nulls)
+          }
         }
-      };
-
-      if (cursor) {
-        queryBody.page.after = cursor;
-      }
-
-      const response = await fetch(recordsUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${XATA_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(queryBody)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.log('Errore paginazione:', errorText);
-        
-        return NextResponse.json({
-          tableName: table,
-          totalRows: 0,
-          lastRows: [],
-          success: false,
-          error: `Errore API: ${response.status} - ${errorText}`
-        }, { status: 500 });
-      }
-
-      const data: any = await response.json();
-      const records = data.records || [];
-      
-      // Accumula tutti i records
-      allRecords.push(...records);
-      totalCount += records.length;
-      
-      // Aggiorna cursor per prossima pagina
-      cursor = data.meta?.page?.cursor;
-      iterations++;
-
-      console.log(`Pagina ${iterations}: +${records.length} records (totale: ${totalCount})`);
-
-      // Protezione anti-loop
-      if (iterations >= maxIterations) {
-        console.log('Raggiunto limite iterazioni, interrompo');
-        break;
-      }
-
-    } while (cursor && iterations < maxIterations);
-
-    console.log(`Conteggio completato: ${totalCount} righe totali`);
-
-    // FASE 2: Prendi le ultime 10 righe (più recenti per data di creazione)
-    const lastRows = allRecords
-      .sort((a: any, b: any) => {
-        const dateA = new Date(a['xata.createdAt'] || 0).getTime();
-        const dateB = new Date(b['xata.createdAt'] || 0).getTime();
-        return dateB - dateA; // Ordine decrescente (più recenti prima)
       })
-      .slice(0, 10);
+    });
+
+    if (!countResponse.ok) {
+      const errorText = await countResponse.text();
+      console.log('Summarize error:', errorText);
+      
+      // Fallback: se summarize non funziona, usa la query normale
+      console.log('Fallback to query method...');
+      return await fallbackToQuery(table);
+    }
+
+    const countData: any = await countResponse.json();
+    const totalRows = countData.records?.[0]?.total || 0;
+    
+    console.log('Fast count result:', totalRows);
+
+    // FASE 2: Prendi le ultime 10 righe con query normale
+    const queryUrl = `${XATA_DATABASE_URL}/tables/${table}/query`;
+    
+    const rowsResponse = await fetch(queryUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${XATA_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sort: [
+          { "xata.createdAt": "desc" }
+        ],
+        page: {
+          size: 10
+        }
+      })
+    });
+
+    let lastRows: any[] = [];
+    
+    if (rowsResponse.ok) {
+      const rowsData: any = await rowsResponse.json();
+      lastRows = rowsData.records || [];
+    } else {
+      console.log('Could not get last rows, but count succeeded');
+    }
 
     return NextResponse.json({
       tableName: table,
-      totalRows: totalCount, // Numero preciso!
+      totalRows, // Numero PRECISO e VELOCE!
       lastRows,
       success: true,
-      debug: {
-        iterations,
-        pagesProcessed: iterations,
-        maxReached: iterations >= maxIterations
-      }
+      method: 'summarize' // Debug info
     });
 
   } catch (error) {
@@ -126,6 +109,49 @@ export async function GET(request: NextRequest) {
       lastRows: [],
       success: false,
       error: `Errore interno: ${error instanceof Error ? error.message : 'Sconosciuto'}`
+    }, { status: 500 });
+  }
+}
+
+// Fallback function se summarize non funziona
+async function fallbackToQuery(table: string) {
+  try {
+    const queryUrl = `${XATA_DATABASE_URL}/tables/${table}/query`;
+    
+    const response = await fetch(queryUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${XATA_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        page: { size: 20 }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Query fallback failed: ${response.status}`);
+    }
+
+    const data: any = await response.json();
+    const records = data.records || [];
+    const hasMore = data.meta?.page?.more || false;
+    
+    return NextResponse.json({
+      tableName: table,
+      totalRows: hasMore ? `${records.length}+` : records.length,
+      lastRows: records.slice(0, 10),
+      success: true,
+      method: 'fallback' // Debug info
+    });
+
+  } catch (error) {
+    return NextResponse.json({
+      tableName: table,
+      totalRows: 0,
+      lastRows: [],
+      success: false,
+      error: `Fallback failed: ${error instanceof Error ? error.message : 'Unknown'}`
     }, { status: 500 });
   }
 }
