@@ -1,219 +1,165 @@
+// app/api/admin/bulk-upload/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-interface BulkUploadRequest {
-  table: string;
-  data: any[];
-}
+const XATA_API_KEY = process.env.XATA_API_KEY;
+const XATA_DATABASE_URL = process.env.XATA_DATABASE_URL;
 
-interface BulkUploadResponse {
+interface BulkUploadResult {
   success: boolean;
   inserted: number;
+  updated: number;
   errors: string[];
-  details?: {
-    total: number;
-    skipped: number;
-  };
+  details?: any;
 }
 
-// Mapping tabelle per validazione
-const VALID_TABLES = {
-  continents: ['name', 'code'],
-  countries: ['continent_id', 'name', 'code', 'flag_url'],
-  regions: ['country_id', 'name', 'type'],
-  cities: ['region_id', 'name', 'type', 'lat', 'lng', 'population'],
-  attractions: ['city_id', 'name', 'description', 'type', 'subtype', 'lat', 'lng', 'visit_duration', 'cost_range', 'image_url', 'is_active'],
-  events: ['city_id', 'name', 'description', 'recurrence_rule', 'season', 'duration', 'cost_range', 'image_url', 'is_active']
-};
-
-async function insertRecords(table: string, records: any[]): Promise<{ inserted: number; errors: string[] }> {
-  const errors: string[] = [];
-  let inserted = 0;
-
+export async function POST(request: NextRequest): Promise<NextResponse<BulkUploadResult>> {
   try {
-    // Headers per chiamata Xata
-    const headers = {
-      'Authorization': `Bearer ${process.env.XATA_API_KEY}`,
-      'Content-Type': 'application/json'
-    };
+    console.log('🚀 [Bulk Upload] Starting bulk upload process');
 
-    // URL base del database
-    const baseUrl = process.env.XATA_DATABASE_URL;
-    
-    if (!baseUrl || !process.env.XATA_API_KEY) {
-      throw new Error('Xata credentials non configurate');
+    // Validazione environment variables
+    if (!XATA_API_KEY || !XATA_DATABASE_URL) {
+      console.error('❌ [Bulk Upload] Missing environment variables');
+      return NextResponse.json({
+        success: false,
+        inserted: 0,
+        updated: 0,
+        errors: ['Configurazione database mancante']
+      }, { status: 500 });
     }
 
-    // Inserisci ogni record singolarmente per migliore error handling
-    for (let i = 0; i < records.length; i++) {
-      const record = records[i];
+    // Parse request body
+    const body: any = await request.json();
+    console.log('📥 [Bulk Upload] Request body:', {
+      table: body.table,
+      dataLength: body.data?.length || 0
+    });
+
+    const { table, data } = body;
+
+    if (!table || !data || !Array.isArray(data)) {
+      console.error('❌ [Bulk Upload] Invalid request format');
+      return NextResponse.json({
+        success: false,
+        inserted: 0,
+        updated: 0,
+        errors: ['Formato richiesta non valido: servono table e data (array)']
+      }, { status: 400 });
+    }
+
+    if (data.length === 0) {
+      console.warn('⚠️ [Bulk Upload] Empty data array');
+      return NextResponse.json({
+        success: true,
+        inserted: 0,
+        updated: 0,
+        errors: []
+      });
+    }
+
+    // Validazione nome tabella
+    const validTables = ['continents', 'countries', 'regions', 'cities', 'attractions', 'events'];
+    if (!validTables.includes(table)) {
+      console.error('❌ [Bulk Upload] Invalid table name:', table);
+      return NextResponse.json({
+        success: false,
+        inserted: 0,
+        updated: 0,
+        errors: [`Tabella non valida: ${table}. Tabelle permesse: ${validTables.join(', ')}`]
+      }, { status: 400 });
+    }
+
+    console.log(`📊 [Bulk Upload] Processing ${data.length} records for table: ${table}`);
+
+    // URL endpoint Xata per bulk operations
+    const bulkUrl = `${XATA_DATABASE_URL}/tables/${table}/data`;
+    
+    let inserted = 0;
+    let updated = 0;
+    const errors: string[] = [];
+
+    // Processa ogni record singolarmente per gestire upsert
+    for (let i = 0; i < data.length; i++) {
+      const record: any = data[i];
       
       try {
-        // Valida campi richiesti
-        const requiredFields = getRequiredFields(table);
-        const missingFields = requiredFields.filter((field: any) => !record.hasOwnProperty(field));
-        
-        if (missingFields.length > 0) {
-          errors.push(`Record ${i + 1}: campi mancanti: ${missingFields.join(', ')}`);
-          continue;
-        }
+        console.log(`📝 [Bulk Upload] Processing record ${i + 1}/${data.length}:`, record);
 
-        // Chiama API Xata per inserimento
-        const response = await fetch(`${baseUrl}/tables/${table}/data`, {
+        // Per ora, facciamo insert diretto
+        // TODO: Implementare logica upsert quando capiamo meglio il comportamento
+        
+        const response = await fetch(bulkUrl, {
           method: 'POST',
-          headers: headers,
+          headers: {
+            'Authorization': `Bearer ${XATA_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify(record)
         });
 
+        const responseText = await response.text();
+        console.log(`📡 [Bulk Upload] Xata response for record ${i + 1}:`, {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseText.substring(0, 200) // Solo primi 200 char per log
+        });
+
         if (response.ok) {
+          // Successo - potrebbe essere insert o update
           inserted++;
+          console.log(`✅ [Bulk Upload] Record ${i + 1} processed successfully`);
         } else {
-          const errorData = await response.text();
-          errors.push(`Record ${i + 1}: ${response.status} - ${errorData}`);
+          // Errore - log dettaglio
+          const errorMsg = `Record ${i + 1}: HTTP ${response.status} - ${responseText}`;
+          errors.push(errorMsg);
+          console.error(`❌ [Bulk Upload] ${errorMsg}`);
         }
 
-      } catch (recordError: any) {
-        errors.push(`Record ${i + 1}: ${recordError.message}`);
+      } catch (recordError) {
+        const errorMsg = `Record ${i + 1}: ${recordError instanceof Error ? recordError.message : 'Errore sconosciuto'}`;
+        errors.push(errorMsg);
+        console.error(`❌ [Bulk Upload] ${errorMsg}`, recordError);
       }
     }
 
-  } catch (globalError: any) {
-    errors.push(`Errore globale: ${globalError.message}`);
-  }
-
-  return { inserted, errors };
-}
-
-function getRequiredFields(table: string): string[] {
-  // Campi obbligatori per ogni tabella
-  const requiredFields: any = {
-    continents: ['name', 'code'],
-    countries: ['continent_id', 'name', 'code'],
-    regions: ['country_id', 'name'],
-    cities: ['region_id', 'name', 'lat', 'lng'],
-    attractions: ['city_id', 'name', 'type', 'lat', 'lng'],
-    events: ['city_id', 'name', 'description']
-  };
-
-  return requiredFields[table] || [];
-}
-
-function validateTable(table: string): boolean {
-  return Object.keys(VALID_TABLES).includes(table);
-}
-
-function validateRecords(table: string, records: any[]): string[] {
-  const errors: string[] = [];
-
-  if (!Array.isArray(records)) {
-    errors.push('Data deve essere un array');
-    return errors;
-  }
-
-  if (records.length === 0) {
-    errors.push('Array vuoto - nessun record da inserire');
-    return errors;
-  }
-
-  if (records.length > 100) {
-    errors.push('Troppi records - massimo 100 per volta');
-    return errors;
-  }
-
-  // Valida struttura base dei records
-  records.forEach((record: any, index: any) => {
-    if (!record || typeof record !== 'object') {
-      errors.push(`Record ${index + 1}: deve essere un oggetto`);
-    }
-  });
-
-  return errors;
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    console.log('🔄 [Bulk Upload] Richiesta ricevuta');
-
-    const body: BulkUploadRequest = await request.json();
-    const { table, data } = body;
-
-    if (!table || !data) {
-      return NextResponse.json({
-        success: false,
-        inserted: 0,
-        errors: ['Parametri table e data richiesti']
-      } as BulkUploadResponse, { status: 400 });
-    }
-
-    // Validazione tabella
-    if (!validateTable(table)) {
-      return NextResponse.json({
-        success: false,
-        inserted: 0,
-        errors: [`Tabella '${table}' non valida. Tabelle supportate: ${Object.keys(VALID_TABLES).join(', ')}`]
-      } as BulkUploadResponse, { status: 400 });
-    }
-
-    // Validazione records
-    const validationErrors = validateRecords(table, data);
-    if (validationErrors.length > 0) {
-      return NextResponse.json({
-        success: false,
-        inserted: 0,
-        errors: validationErrors
-      } as BulkUploadResponse, { status: 400 });
-    }
-
-    console.log(`📊 [Bulk Upload] Inserendo ${data.length} records in tabella '${table}'`);
-
-    // Inserimento records
-    const result = await insertRecords(table, data);
-
-    const response: BulkUploadResponse = {
-      success: result.inserted > 0,
-      inserted: result.inserted,
-      errors: result.errors,
+    const result: BulkUploadResult = {
+      success: inserted > 0 || errors.length === 0,
+      inserted,
+      updated, // Al momento sempre 0, implementeremo upsert dopo
+      errors,
       details: {
-        total: data.length,
-        skipped: data.length - result.inserted
+        table,
+        totalRecords: data.length,
+        processed: inserted + errors.length
       }
     };
 
-    console.log(`✅ [Bulk Upload] Completato: ${result.inserted}/${data.length} inseriti`);
+    console.log('🏁 [Bulk Upload] Final result:', result);
 
-    return NextResponse.json(response);
+    return NextResponse.json(result);
 
-  } catch (error: any) {
-    console.error('❌ [Bulk Upload] Errore:', error);
-
+  } catch (error) {
+    console.error('💥 [Bulk Upload] Unexpected error:', error);
+    
     return NextResponse.json({
       success: false,
       inserted: 0,
-      errors: [error.message || 'Errore interno del server']
-    } as BulkUploadResponse, { status: 500 });
+      updated: 0,
+      errors: [`Errore interno: ${error instanceof Error ? error.message : 'Sconosciuto'}`],
+      details: {
+        errorStack: error instanceof Error ? error.stack : undefined
+      }
+    }, { status: 500 });
   }
 }
 
-// GET per info API
-export async function GET() {
+// GET endpoint per test
+export async function GET(): Promise<NextResponse> {
   return NextResponse.json({
-    endpoint: 'Bulk Upload API',
-    version: '1.0',
-    supportedTables: Object.keys(VALID_TABLES),
-    maxRecords: 100,
-    method: 'POST',
-    bodyExample: {
-      table: 'attractions',
-      data: [
-        {
-          city_id: 1,
-          name: 'Colosseo',
-          description: 'Anfiteatro Romano',
-          type: 'monument',
-          lat: 41.8902,
-          lng: 12.4922,
-          is_active: true
-        }
-      ]
+    message: 'Bulk Upload API - Use POST method',
+    supportedTables: ['continents', 'countries', 'regions', 'cities', 'attractions', 'events'],
+    format: {
+      table: 'string',
+      data: 'array of objects'
     }
   });
 }
