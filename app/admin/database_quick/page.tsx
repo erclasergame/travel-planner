@@ -54,18 +54,34 @@ const DatabaseExplorer: React.FC = () => {
     setErrors(prev => ({ ...prev, [tableName]: '' }));
 
     try {
-      // Usa l'API Xata HTTP direttamente
-      const response = await fetch(`https://testdaniele77-1-s-workspace-j00f29.eu-central-1.xata.sh/db/travel_planner:main/tables/${tableName}/query`, {
-        method: 'POST',
+      let apiUrl = '';
+      
+      // Usa le API interne del progetto invece di Xata diretta
+      switch (tableName) {
+        case 'cities':
+          apiUrl = '/api/database/cities';
+          break;
+        case 'countries':
+          apiUrl = '/api/database/countries';
+          break;
+        case 'continents':
+          apiUrl = '/api/database/continents';
+          break;
+        case 'attractions':
+          apiUrl = '/api/database/attractions';
+          break;
+        case 'events':
+          apiUrl = '/api/database/events';
+          break;
+        default:
+          throw new Error(`API not available for ${tableName}`);
+      }
+
+      const response = await fetch(apiUrl, {
+        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_XATA_API_KEY || 'xau_KbPlX7VLrUqBBzC9sJqhAE4yO3tQgwFwM'}`,
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          page: {
-            size: 10
-          }
-        })
+        }
       });
 
       if (!response.ok) {
@@ -73,13 +89,24 @@ const DatabaseExplorer: React.FC = () => {
       }
 
       const result = await response.json();
-      setData(prev => ({ ...prev, [tableName]: result.records || [] }));
+      
+      // Adatta la risposta in base al formato
+      let records = [];
+      if (result.records) {
+        records = result.records.slice(0, 10);
+      } else if (Array.isArray(result)) {
+        records = result.slice(0, 10);
+      } else if (result.data && Array.isArray(result.data)) {
+        records = result.data.slice(0, 10);
+      }
+      
+      setData(prev => ({ ...prev, [tableName]: records }));
 
     } catch (error: any) {
       console.error(`Error loading ${tableName}:`, error);
       setErrors(prev => ({ ...prev, [tableName]: error.message }));
       
-      // Fallback con dati mock se API non funziona
+      // Fallback con dati mock
       setData(prev => ({ ...prev, [tableName]: getMockData(tableName) }));
     } finally {
       setLoading(prev => ({ ...prev, [tableName]: false }));
