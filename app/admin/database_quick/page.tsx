@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Database, Eye, RefreshCw, AlertCircle, CheckCircle, Users, MapPin, Globe, Calendar, Building2 } from 'lucide-react';
 
