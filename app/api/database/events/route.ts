@@ -16,7 +16,7 @@ export async function GET() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        page: { size: 50 }
+        page: { size: 200 }
       })
     });
     
