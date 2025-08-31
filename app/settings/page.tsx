@@ -17,11 +17,13 @@ const SettingsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [globalSettings, setGlobalSettings] = useState<any>(null);
+  const [dbStatus, setDbStatus] = useState<'connected' | 'checking' | 'table-missing' | 'error'>('connected');
 
   // Carica modelli AI all'avvio
   useEffect(() => {
     loadModels();
     loadGlobalSettings();
+    checkDatabaseStatus();
   }, []);
 
   // 🔧 NUOVO: Carica settings globali
@@ -157,6 +159,36 @@ const SettingsPage = () => {
     }
 
     setTesting(false);
+  };
+
+  const checkDatabaseStatus = async () => {
+    setDbStatus('checking');
+    try {
+      console.log('🔍 Checking database connection and table...');
+      
+      // Prova a leggere le impostazioni per verificare connessione e tabella
+      const response = await fetch('/api/admin-settings');
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          console.log('✅ Database connected and table exists');
+          setDbStatus('connected');
+        } else {
+          console.log('⚠️ Database connected but table might be missing');
+          setDbStatus('table-missing');
+        }
+      } else if (response.status === 404) {
+        console.log('❌ Table not found in database');
+        setDbStatus('table-missing');
+      } else {
+        console.log('❌ Database connection error');
+        setDbStatus('error');
+      }
+    } catch (error) {
+      console.error('❌ Database check failed:', error);
+      setDbStatus('error');
+    }
   };
 
   const getCategoryColor = (category: CategoryType) => {
