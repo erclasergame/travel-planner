@@ -261,7 +261,7 @@ const DatabaseExplorer: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {currentData.slice(0, 200).map((record, index) => (
+                  {currentData.slice(0, 200).map((record, index) => ( 
                     <tr key={record.id || index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {index + 1}
