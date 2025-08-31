@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Configurazione Xata
+const XATA_API_KEY = process.env.XATA_API_KEY;
+const XATA_DB_URL = process.env.XATA_DATABASE_URL || 'https://testdaniele77-1-s-workspace-j00f29.eu-central-1.xata.sh/db/travel_planner:main';
+
 export async function POST(request: NextRequest) {
   try {
-    console.log('🧪 Starting database write test...');
+    console.log('🧪 Starting Xata database write test...');
     
     // Parse request body safely
     let body;
@@ -15,134 +19,142 @@ export async function POST(request: NextRequest) {
     
     const { message = 'Test automatico di scrittura del database' } = body;
     
-    // Generate test ID
-    const testId = `test-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
-    
-    const testRecord = {
-      id: testId,
-      message: message,
-      timestamp: new Date().toISOString(),
-      type: 'database-test',
-      source: 'admin-panel',
-      status: 'active'
-    };
-    
-    console.log('📝 Test record created:', testRecord);
-    
-    // Check if Redis is available
-    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-    
-    if (!redisUrl || !redisToken) {
-      console.error('❌ Redis environment variables missing');
-      console.log('UPSTASH_REDIS_REST_URL present:', !!redisUrl);
-      console.log('UPSTASH_REDIS_REST_TOKEN present:', !!redisToken);
-      
+    // Check if Xata is configured
+    if (!XATA_API_KEY) {
+      console.error('❌ XATA_API_KEY not configured');
       return NextResponse.json({
         success: false,
-        error: 'Redis configuration missing. Check environment variables.',
-        record: testRecord,
+        error: 'XATA_API_KEY not configured',
         tableInfo: {
-          storage: 'Redis (Upstash)',
+          storage: 'Xata',
           status: 'configuration-error',
-          details: 'UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN not found'
+          details: 'XATA_API_KEY not found in environment variables'
         }
       }, { status: 500 });
     }
     
-    // Try to connect to Redis using direct HTTP API (more reliable than SDK)
-    const redisKey = `test-record-${testId}`;
+    // Generate test ID
+    const testId = `test-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    
+    // Create a test record for global-settings table
+    const testRecord = {
+      id: testId,
+      ai_model: 'test-model',
+      last_updated: new Date().toISOString(),
+      updated_by: 'test-script',
+      test_message: message
+    };
+    
+    console.log('📝 Test record created:', testRecord);
     
     try {
-      console.log('🔗 Attempting Redis connection via HTTP API...');
+      console.log('🔗 Attempting Xata connection...');
       
-      // Use direct Redis REST API call instead of SDK
-      const redisResponse = await fetch(`${redisUrl}/set/${redisKey}`, {
+      // Test table existence first
+      const testTableResponse = await fetch(`${XATA_DB_URL}/tables/global-settings/query`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${redisToken}`,
+          'Authorization': `Bearer ${XATA_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          value: JSON.stringify(testRecord),
-          ex: 3600 // TTL 1 hour
+          page: { size: 1 }
         })
       });
       
-      console.log('📡 Redis response status:', redisResponse.status);
-      
-      if (!redisResponse.ok) {
-        const errorText = await redisResponse.text();
-        console.error('❌ Redis HTTP error:', errorText);
+      if (!testTableResponse.ok) {
+        const errorText = await testTableResponse.text();
+        console.error('❌ Table check failed:', errorText);
         
         return NextResponse.json({
           success: false,
-          error: `Redis HTTP error: ${redisResponse.status} - ${errorText}`,
-          record: testRecord,
+          error: `Xata table check failed: ${testTableResponse.status} - ${errorText}`,
           tableInfo: {
-            storage: 'Redis (Upstash)',
-            status: 'connection-error',
-            details: `HTTP ${redisResponse.status}: ${errorText}`
+            storage: 'Xata',
+            table: 'global-settings',
+            status: 'table-error',
+            details: errorText
           }
-        }, { status: 500 });
+        }, { status: testTableResponse.status });
       }
       
-      const redisResult = await redisResponse.text();
-      console.log('✅ Redis save successful:', redisResult);
+      const tableData = await testTableResponse.json();
+      console.log('✅ Table exists, sample data:', tableData);
       
-      // Verify the record was saved
-      const verifyResponse = await fetch(`${redisUrl}/get/${redisKey}`, {
-        method: 'GET',
+      // Get column names from existing record
+      const columns = tableData.records && tableData.records.length > 0 
+        ? Object.keys(tableData.records[0]).filter(key => !key.startsWith('xata'))
+        : [];
+      
+      console.log('📋 Available columns:', columns);
+      
+      // Create a filtered record with only valid columns
+      const filteredRecord: Record<string, any> = { id: testId };
+      
+      // Only include fields that exist in the table
+      if (columns.indexOf('ai_model') >= 0) filteredRecord.ai_model = 'test-model';
+      if (columns.indexOf('last_updated') >= 0) filteredRecord.last_updated = new Date().toISOString();
+      if (columns.indexOf('updated_by') >= 0) filteredRecord.updated_by = 'test-script';
+      
+      console.log('📝 Filtered record to insert:', filteredRecord);
+      
+      // Try to insert the record
+      const insertResponse = await fetch(`${XATA_DB_URL}/tables/global-settings/data`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${redisToken}`
+          'Authorization': `Bearer ${XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(filteredRecord)
+      });
+      
+      console.log('📡 Insert response status:', insertResponse.status);
+      
+      if (!insertResponse.ok) {
+        const errorText = await insertResponse.text();
+        console.error('❌ Insert failed:', errorText);
+        
+        return NextResponse.json({
+          success: false,
+          error: `Xata insert failed: ${insertResponse.status} - ${errorText}`,
+          record: filteredRecord,
+          tableInfo: {
+            storage: 'Xata',
+            table: 'global-settings',
+            columns: columns,
+            status: 'insert-error',
+            details: errorText
+          }
+        }, { status: insertResponse.status });
+      }
+      
+      const insertResult = await insertResponse.json();
+      console.log('✅ Insert successful:', insertResult);
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Test di scrittura completato con successo!',
+        record: filteredRecord,
+        result: insertResult,
+        tableInfo: {
+          storage: 'Xata',
+          table: 'global-settings',
+          columns: columns,
+          status: 'success'
         }
       });
       
-      if (verifyResponse.ok) {
-        const savedData = await verifyResponse.text();
-        console.log('✅ Verification successful, saved data:', savedData);
-        
-        return NextResponse.json({
-          success: true,
-          message: 'Test di scrittura completato con successo!',
-          record: testRecord,
-          tableInfo: {
-            storage: 'Redis (Upstash)',
-            key: redisKey,
-            ttl: '1 ora',
-            type: 'test-record',
-            status: 'verified'
-          }
-        });
-        
-      } else {
-        console.log('⚠️ Verification failed but save succeeded');
-        
-        return NextResponse.json({
-          success: true,
-          message: 'Test di scrittura completato (verifica non riuscita)',
-          record: testRecord,
-          tableInfo: {
-            storage: 'Redis (Upstash)',
-            key: redisKey,
-            ttl: '1 ora',
-            type: 'test-record',
-            status: 'saved-not-verified'
-          }
-        });
-      }
-      
-    } catch (redisError: any) {
-      console.error('❌ Redis operation error:', redisError);
+    } catch (xataError: any) {
+      console.error('❌ Xata operation error:', xataError);
       
       return NextResponse.json({
         success: false,
-        error: `Redis operation failed: ${redisError.message || 'Unknown error'}`,
+        error: `Xata operation failed: ${xataError.message || 'Unknown error'}`,
         record: testRecord,
         tableInfo: {
-          storage: 'Redis (Upstash)',
+          storage: 'Xata',
           status: 'operation-error',
-          details: redisError.message || 'Unknown Redis error'
+          details: xataError.message || 'Unknown Xata error'
         }
       }, { status: 500 });
     }
