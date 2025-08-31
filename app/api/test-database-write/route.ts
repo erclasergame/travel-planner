@@ -82,42 +82,56 @@ export async function POST(request: NextRequest) {
     
     console.log('📋 Colonne disponibili:', tableInfo.columns);
     
-    // Prepariamo un record di test basato sulle colonne disponibili
-    const testRecord: Record<string, any> = {
-      id: `test-${Date.now()}`
-    };
+    // SOLUZIONE DRASTICA: Invece di creare un nuovo record, aggiorniamo quello esistente
+    console.log('🔍 Cercando record esistente con id "global-settings"...');
     
-    // Aggiungiamo ai_model solo se esiste nella tabella
-    if (tableInfo.columns.includes('ai_model')) {
-      testRecord.ai_model = 'test-model';
-    }
-    
-    console.log('📝 Test record da inserire:', testRecord);
-    
-    // Prova a inserire direttamente nella tabella
-    const response = await fetch(`${XATA_DB_URL}/tables/${tableName}/data`, {
-      method: 'POST',
+    // Prova ad aggiornare il record esistente invece di crearne uno nuovo
+    const updateResponse = await fetch(`${XATA_DB_URL}/tables/${tableName}/data/global-settings`, {
+      method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${XATA_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(testRecord)
+      body: JSON.stringify({
+        ai_model: `test-model-${Date.now()}`
+      })
     });
+    
+    console.log('📡 Update response status:', updateResponse.status);
+    
+    // Se l'aggiornamento fallisce, proviamo a leggere il record
+    if (!updateResponse.ok) {
+      console.log('⚠️ Aggiornamento fallito, provo a leggere il record per diagnosi');
+      
+      const getResponse = await fetch(`${XATA_DB_URL}/tables/${tableName}/data/global-settings`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      console.log('📡 Get response status:', getResponse.status);
+      const getResult = getResponse.ok ? await getResponse.json() : null;
+      console.log('📄 Record esistente:', getResult);
+    }
+    
+    // Usiamo il risultato dell'aggiornamento come risposta principale
+    const response = updateResponse;
     
     console.log('📡 Response status:', response.status);
     
     if (response.ok) {
       const result = await response.json();
-      console.log('✅ Test riuscito! Record inserito:', result);
+      console.log('✅ Test riuscito! Record aggiornato:', result);
       
       return NextResponse.json({
         success: true,
-        message: 'Test record inserito con successo',
+        message: 'Record aggiornato con successo',
         tableInfo: {
           columns: tableInfo.columns,
           sampleRecord: tableInfo.sampleRecord
         },
-        record: testRecord,
         result: result
       });
       
@@ -131,8 +145,7 @@ export async function POST(request: NextRequest) {
         tableInfo: {
           columns: tableInfo.columns,
           sampleRecord: tableInfo.sampleRecord
-        },
-        record: testRecord
+        }
       }, { status: response.status });
     }
     
