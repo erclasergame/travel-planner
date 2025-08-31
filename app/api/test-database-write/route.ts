@@ -4,8 +4,17 @@ import { NextRequest, NextResponse } from 'next/server';
 const XATA_API_KEY = process.env.XATA_API_KEY;
 const XATA_DB_URL = process.env.XATA_DATABASE_URL || 'https://testdaniele77-1-s-workspace-j00f29.eu-central-1.xata.sh/db/travel_planner:main';
 
+// Interfaccia per il risultato della funzione getTableInfo
+interface TableInfoResult {
+  success: boolean;
+  columns: string[];
+  sampleRecord?: any;
+  meta?: any;
+  error?: string;
+}
+
 // Funzione per ottenere informazioni sulla tabella tramite una query
-async function getTableInfo(tableName: string) {
+async function getTableInfo(tableName: string): Promise<TableInfoResult> {
   try {
     console.log(`🔍 Ottengo informazioni per tabella: ${tableName}`);
     
@@ -30,7 +39,7 @@ async function getTableInfo(tableName: string) {
     console.log('📊 Dati tabella:', JSON.stringify(data, null, 2));
     
     // Estrai i nomi delle colonne dal primo record (se esiste)
-    const columns = data.records && data.records.length > 0 
+    const columns: string[] = data.records && data.records.length > 0 
       ? Object.keys(data.records[0]).filter(key => !key.startsWith('xata'))
       : [];
       
