@@ -22,9 +22,10 @@ const SettingsPage = () => {
 
   // Carica modelli AI all'avvio
   useEffect(() => {
+    checkDatabaseStatus();
+    testDatabaseWrite();
     loadModels();
     loadGlobalSettings();
-    checkDatabaseStatus();
   }, []);
 
   // 🔧 NUOVO: Carica settings globali
@@ -192,26 +193,33 @@ const SettingsPage = () => {
     }
   };
 
+  // 🔧 NUOVO: Test diretto di scrittura sul database
   const testDatabaseWrite = async () => {
-    setDbTestResult('Provo a scrivere...');
+    setDbTestResult('🧪 Testando scrittura database...');
     try {
+      console.log('🧪 Testing direct database write...');
+      
       const response = await fetch('/api/test-database-write', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: 'Test di scrittura del database'
+          message: 'Test automatico di scrittura del database'
         })
       });
+      
       const data = await response.json();
       if (response.ok && data.success) {
-        setDbTestResult('✅ Scrittura riuscito!');
+        console.log('✅ Test write successful:', data);
+        setDbTestResult(`✅ Test riuscito! Record inserito con ID: ${data.record.id}`);
       } else {
-        setDbTestResult('❌ Scrittura fallito: ' + (data.error || 'Errore sconosciuto'));
+        console.log('❌ Test write failed:', data);
+        setDbTestResult(`❌ Test fallito: ${data.error || 'Errore sconosciuto'}`);
       }
     } catch (error) {
-      setDbTestResult('❌ Scrittura fallito: ' + (error instanceof Error ? error.message : String(error)));
+      console.error('❌ Test write error:', error);
+      setDbTestResult(`❌ Errore test: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
