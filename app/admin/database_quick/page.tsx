@@ -72,8 +72,8 @@ const DatabaseExplorer: React.FC = () => {
         throw new Error(result.error);
       }
       
-      // Prendi i primi 10 record per la visualizzazione
-      const records = result.records ? result.records.slice(0, 10) : [];
+             // Prendi i primi 200 record per la visualizzazione
+       const records = result.records ? result.records.slice(0, 200) : [];
       setData(prev => ({ ...prev, [tableName]: records }));
 
     } catch (error: any) {
