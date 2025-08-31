@@ -4,28 +4,49 @@ import { NextRequest, NextResponse } from 'next/server';
 const XATA_API_KEY = process.env.XATA_API_KEY;
 const XATA_DB_URL = process.env.XATA_DATABASE_URL || 'https://testdaniele77-1-s-workspace-j00f29.eu-central-1.xata.sh/db/travel_planner:main';
 
-// Funzione per ottenere lo schema della tabella
-async function getTableSchema(tableName: string) {
+// Funzione per ottenere informazioni sulla tabella tramite una query
+async function getTableInfo(tableName: string) {
   try {
-    console.log(`🔍 Ottengo schema per tabella: ${tableName}`);
+    console.log(`🔍 Ottengo informazioni per tabella: ${tableName}`);
     
-    const response = await fetch(`${XATA_DB_URL}/tables/${tableName}`, {
-      method: 'GET',
+    // Facciamo una query semplice per ottenere un record e vedere quali campi restituisce
+    const response = await fetch(`${XATA_DB_URL}/tables/${tableName}/query`, {
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${XATA_API_KEY}`,
         'Content-Type': 'application/json',
-      }
+      },
+      body: JSON.stringify({
+        page: { size: 1 }
+      })
     });
     
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`Errore ottenimento schema (${response.status}): ${error}`);
+      throw new Error(`Errore ottenimento info tabella (${response.status}): ${error}`);
     }
     
-    return await response.json();
+    const data = await response.json();
+    console.log('📊 Dati tabella:', JSON.stringify(data, null, 2));
+    
+    // Estrai i nomi delle colonne dal primo record (se esiste)
+    const columns = data.records && data.records.length > 0 
+      ? Object.keys(data.records[0]).filter(key => !key.startsWith('xata'))
+      : [];
+      
+    return {
+      success: true,
+      columns,
+      sampleRecord: data.records && data.records.length > 0 ? data.records[0] : null,
+      meta: data.meta || {}
+    };
   } catch (error) {
-    console.error('❌ Errore lettura schema:', error);
-    return null;
+    console.error('❌ Errore lettura info tabella:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Errore sconosciuto',
+      columns: []
+    };
   }
 }
 
@@ -37,37 +58,30 @@ export async function POST(request: NextRequest) {
       throw new Error('XATA_API_KEY not configured');
     }
     
-    // 1. Prima otteniamo lo schema della tabella
+    // 1. Prima otteniamo informazioni sulla tabella
     const tableName = 'global-settings';
-    const schema = await getTableSchema(tableName);
+    const tableInfo = await getTableInfo(tableName);
     
-    console.log('📊 Schema tabella:', JSON.stringify(schema, null, 2));
-    
-    // Se non riusciamo a ottenere lo schema, restituiamo un errore
-    if (!schema) {
+    // Se non riusciamo a ottenere informazioni sulla tabella
+    if (!tableInfo.success) {
       return NextResponse.json({
         success: false,
-        error: 'Non è stato possibile ottenere lo schema della tabella',
+        error: `Non è stato possibile ottenere informazioni sulla tabella: ${tableInfo.error}`,
         tableName
       }, { status: 500 });
     }
     
-    // Estrai le colonne disponibili dallo schema
-    const availableColumns = schema.columns ? schema.columns.map((col: any) => ({
-      name: col.name,
-      type: col.type,
-      unique: col.unique || false,
-      notNull: col.notNull || false,
-      defaultValue: col.defaultValue
-    })) : [];
+    console.log('📋 Colonne disponibili:', tableInfo.columns);
     
-    console.log('📋 Colonne disponibili:', availableColumns);
-    
-    // 2. Ora proviamo a inserire un record minimo
-    const testRecord = {
-      id: `test-${Date.now()}`,
-      ai_model: 'test-model'
+    // Prepariamo un record di test basato sulle colonne disponibili
+    const testRecord: Record<string, any> = {
+      id: `test-${Date.now()}`
     };
+    
+    // Aggiungiamo ai_model solo se esiste nella tabella
+    if (tableInfo.columns.includes('ai_model')) {
+      testRecord.ai_model = 'test-model';
+    }
     
     console.log('📝 Test record da inserire:', testRecord);
     
@@ -90,7 +104,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: 'Test record inserito con successo',
-        schema: availableColumns,
+        tableInfo: {
+          columns: tableInfo.columns,
+          sampleRecord: tableInfo.sampleRecord
+        },
         record: testRecord,
         result: result
       });
@@ -102,7 +119,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         error: `HTTP ${response.status}: ${errorText}`,
-        schema: availableColumns,
+        tableInfo: {
+          columns: tableInfo.columns,
+          sampleRecord: tableInfo.sampleRecord
+        },
         record: testRecord
       }, { status: response.status });
     }
