@@ -73,7 +73,7 @@ const DatabaseExplorer: React.FC = () => {
       }
       
       // Prendi i primi 10 record per la visualizzazione
-      const records = result.records ? result.records.slice(0, 200) : [];
+      const records = result.records ? result.records.slice(0, 10) : [];
       setData(prev => ({ ...prev, [tableName]: records }));
 
     } catch (error: any) {
@@ -261,7 +261,7 @@ const DatabaseExplorer: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {currentData.slice(0, 10).map((record, index) => (
+                  {currentData.slice(0, 200).map((record, index) => (
                     <tr key={record.id || index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {index + 1}
@@ -284,7 +284,7 @@ const DatabaseExplorer: React.FC = () => {
 
         {/* Footer Info */}
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Showing first 10 records per table • Database: Xata Lite (Real Data)</p>
+          <p>Showing first 200 records per table • Database: Xata Lite (Real Data)</p>
           <p className="mt-1">
             <strong>Schema:</strong> Simplified (regions integrated in cities) • 
             <strong>Total tables:</strong> {tables.length} active
