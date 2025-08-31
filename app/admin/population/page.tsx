@@ -4,10 +4,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Search, ChevronRight, Play, Pause, Database, Globe, MapPin, Camera, Calendar } from 'lucide-react';
 
 // 🎯 Tipi TypeScript
 interface DatabaseStats {
@@ -149,9 +145,13 @@ export default function PopulationDashboard() {
 
   // 🎨 Helper per status badge
   const getStatusBadge = (citiesCount: number, attractionsCount: number) => {
-    if (citiesCount === 0) return <Badge variant="destructive">No Cities</Badge>;
-    if (attractionsCount === 0) return <Badge variant="outline">Cities Only</Badge>;
-    return <Badge variant="default">Complete</Badge>;
+    if (citiesCount === 0) {
+      return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded">No Cities</span>;
+    }
+    if (attractionsCount === 0) {
+      return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">Cities Only</span>;
+    }
+    return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">Complete</span>;
   };
 
   // 🌍 Continenti disponibili
@@ -195,7 +195,7 @@ export default function PopulationDashboard() {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
-          <RefreshCw className="h-8 w-8 animate-spin" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="ml-2">Caricamento statistiche database...</span>
         </div>
       </div>
@@ -207,188 +207,168 @@ export default function PopulationDashboard() {
       {/* 📊 HEADER - Database Overview (SEMPRE VISIBILE) */}
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border">
         <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
-          <Database className="h-6 w-6" />
-          Travel Planner - Population Dashboard
+          🗄️ Travel Planner - Population Dashboard
         </h1>
         
-        {/* Statistiche Immediate */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-          <Card className="bg-green-50 border-green-200">
-            <CardContent className="p-3 text-center">
-              <Globe className="h-5 w-5 mx-auto mb-1 text-green-600" />
-              <div className="text-2xl font-bold text-green-700">{stats.continents}</div>
-              <div className="text-sm text-green-600">Continents</div>
-            </CardContent>
-          </Card>
+        {/* Statistiche Immediate - GRANDI E VISIBILI */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          <div className="bg-green-50 border-2 border-green-200 p-4 rounded-lg text-center">
+            <div className="text-3xl font-bold text-green-700 mb-1">{stats.continents}</div>
+            <div className="text-sm text-green-600 font-medium">🌍 CONTINENTS</div>
+          </div>
 
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-3 text-center">
-              <img src="/api/placeholder/20/20" alt="flag" className="h-5 w-5 mx-auto mb-1" />
-              <div className="text-2xl font-bold text-blue-700">{stats.countries}</div>
-              <div className="text-sm text-blue-600">Countries</div>
-            </CardContent>
-          </Card>
+          <div className="bg-blue-50 border-2 border-blue-200 p-4 rounded-lg text-center">
+            <div className="text-3xl font-bold text-blue-700 mb-1">{stats.countries}</div>
+            <div className="text-sm text-blue-600 font-medium">🏳️ COUNTRIES</div>
+          </div>
 
-          <Card className="bg-purple-50 border-purple-200">
-            <CardContent className="p-3 text-center">
-              <MapPin className="h-5 w-5 mx-auto mb-1 text-purple-600" />
-              <div className="text-2xl font-bold text-purple-700">{stats.cities}</div>
-              <div className="text-sm text-purple-600">Cities</div>
-            </CardContent>
-          </Card>
+          <div className="bg-purple-50 border-2 border-purple-200 p-4 rounded-lg text-center">
+            <div className="text-3xl font-bold text-purple-700 mb-1">{stats.cities}</div>
+            <div className="text-sm text-purple-600 font-medium">🏙️ CITIES</div>
+          </div>
 
-          <Card className="bg-orange-50 border-orange-200">
-            <CardContent className="p-3 text-center">
-              <Camera className="h-5 w-5 mx-auto mb-1 text-orange-600" />
-              <div className="text-2xl font-bold text-orange-700">{stats.attractions}</div>
-              <div className="text-sm text-orange-600">Attractions</div>
-            </CardContent>
-          </Card>
+          <div className="bg-orange-50 border-2 border-orange-200 p-4 rounded-lg text-center">
+            <div className="text-3xl font-bold text-orange-700 mb-1">{stats.attractions}</div>
+            <div className="text-sm text-orange-600 font-medium">🎯 ATTRACTIONS</div>
+          </div>
 
-          <Card className="bg-pink-50 border-pink-200">
-            <CardContent className="p-3 text-center">
-              <Calendar className="h-5 w-5 mx-auto mb-1 text-pink-600" />
-              <div className="text-2xl font-bold text-pink-700">{stats.events}</div>
-              <div className="text-sm text-pink-600">Events</div>
-            </CardContent>
-          </Card>
+          <div className="bg-pink-50 border-2 border-pink-200 p-4 rounded-lg text-center">
+            <div className="text-3xl font-bold text-pink-700 mb-1">{stats.events}</div>
+            <div className="text-sm text-pink-600 font-medium">📅 EVENTS</div>
+          </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="bg-white p-4 rounded border">
+        {/* Progress Bar - MOLTO VISIBILE */}
+        <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
           <div className="flex justify-between items-center mb-2">
-            <span className="font-medium">Population Progress</span>
-            <span className="text-sm text-gray-600">
+            <span className="font-bold text-lg">🚀 Population Progress</span>
+            <span className="text-lg font-medium text-gray-700">
               {progress.countries_with_cities}/{progress.countries_total} countries have cities ({progress.completion_percentage}%)
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
+          <div className="w-full bg-gray-200 rounded-full h-4 border">
             <div 
-              className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+              className="bg-blue-600 h-4 rounded-full transition-all duration-300"
               style={{ width: `${progress.completion_percentage}%` }}
             />
           </div>
-          <div className="text-xs text-gray-500 mt-1">
-            {progress.cities_with_attractions}/{progress.cities_total} cities have attractions
+          <div className="text-sm text-gray-600 mt-2 font-medium">
+            📊 {progress.cities_with_attractions}/{progress.cities_total} cities have attractions
+          </div>
+        </div>
+
+        {/* Status Summary */}
+        <div className="mt-4 p-3 bg-white rounded border">
+          <div className="text-sm font-medium text-gray-700">
+            📈 <strong>Database Status:</strong> {progress.completion_percentage}% populated • 
+            <strong>Next Priority:</strong> {countries.filter(c => c.needs_cities).length} countries need cities • 
+            <strong>Last Updated:</strong> {stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleString() : 'Never'}
           </div>
         </div>
       </div>
 
       {/* 🎛️ CONTROLS */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>AI Population Controls</span>
-            <Button 
-              onClick={() => loadDatabaseStats()} 
-              variant="outline" 
-              size="sm"
-              disabled={isLoading}
+      <div className="bg-white rounded-lg border-2 border-gray-200 p-6">
+        <h2 className="text-xl font-bold mb-4 flex items-center justify-between">
+          🤖 AI Population Controls
+          <button 
+            onClick={() => loadDatabaseStats()} 
+            className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 text-sm"
+            disabled={isLoading}
+          >
+            {isLoading ? '⏳' : '🔄'} Refresh
+          </button>
+        </h2>
+        
+        <div className="flex flex-wrap gap-2 mb-4">
+          {continents.map(continent => (
+            <button
+              key={continent.code}
+              className={`px-4 py-2 rounded border font-medium ${
+                selectedContinent === continent.code 
+                  ? 'bg-blue-600 text-white border-blue-600' 
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+              onClick={() => setSelectedContinent(continent.code)}
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {continents.map(continent => (
-              <Button
-                key={continent.code}
-                variant={selectedContinent === continent.code ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedContinent(continent.code)}
-              >
-                {continent.emoji} {continent.name}
-              </Button>
-            ))}
-          </div>
+              {continent.emoji} {continent.name}
+            </button>
+          ))}
+        </div>
 
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => startAIPopulation()}
-              disabled={isPopulating}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {isPopulating ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
-              {isPopulating ? 'Population Running...' : 'Start Auto Population'}
-            </Button>
-            
-            <Button variant="outline">
-              <Search className="h-4 w-4 mr-2" />
-              Find Missing Cities
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => startAIPopulation()}
+            disabled={isPopulating}
+            className={`px-6 py-3 rounded font-medium ${
+              isPopulating 
+                ? 'bg-gray-400 text-white cursor-not-allowed'
+                : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
+          >
+            {isPopulating ? '⏸️ Population Running...' : '▶️ Start Auto Population'}
+          </button>
+          
+          <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">
+            🔍 Find Missing Cities
+          </button>
+        </div>
+      </div>
 
       {/* 🗺️ COUNTRIES LIST */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Countries Overview 
-            {selectedContinent !== 'all' && (
-              <span className="text-sm font-normal ml-2">
-                ({filteredCountries.length} countries in {continents.find(c => c.code === selectedContinent)?.name})
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-2 max-h-96 overflow-y-auto">
-            {filteredCountries.map(country => (
-              <div 
-                key={country.code}
-                className="flex items-center justify-between p-3 border rounded hover:bg-gray-50"
-              >
-                <div className="flex items-center gap-3">
-                  {country.flag_url && (
-                    <img 
-                      src={country.flag_url} 
-                      alt={`${country.name} flag`}
-                      className="w-6 h-4 object-cover rounded"
-                    />
-                  )}
-                  <div>
-                    <div className="font-medium">{country.name}</div>
-                    <div className="text-sm text-gray-500">{country.code}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="text-right text-sm">
-                    <div>{country.cities_count} cities</div>
-                    <div className="text-gray-500">
-                      {country.attractions_count} attractions, {country.events_count} events
-                    </div>
-                  </div>
-                  
-                  {getStatusBadge(country.cities_count, country.attractions_count)}
-                  
-                  {country.needs_cities && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => startAIPopulation(country.code)}
-                      disabled={isPopulating}
-                    >
-                      <Search className="h-3 w-3 mr-1" />
-                      Find Cities
-                    </Button>
-                  )}
+      <div className="bg-white rounded-lg border-2 border-gray-200 p-6">
+        <h2 className="text-xl font-bold mb-4">
+          🗺️ Countries Overview 
+          {selectedContinent !== 'all' && (
+            <span className="text-base font-normal ml-2 text-gray-600">
+              ({filteredCountries.length} countries in {continents.find(c => c.code === selectedContinent)?.name})
+            </span>
+          )}
+        </h2>
+        
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {filteredCountries.map(country => (
+            <div 
+              key={country.code}
+              className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+            >
+              <div className="flex items-center gap-4">
+                {country.flag_url && (
+                  <img 
+                    src={country.flag_url} 
+                    alt={`${country.name} flag`}
+                    className="w-8 h-5 object-cover rounded shadow-sm"
+                  />
+                )}
+                <div>
+                  <div className="font-medium text-lg">{country.name}</div>
+                  <div className="text-sm text-gray-500">{country.code}</div>
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* 📈 STATS FOOTER */}
-      <div className="text-center text-sm text-gray-500 border-t pt-4">
-        Last updated: {stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleString() : 'Never'}
-        <br />
-        Database status: <strong>{progress.completion_percentage}% populated</strong> • 
-        Next priority: <strong>{countries.filter(c => c.needs_cities).length} countries need cities</strong>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="font-medium">{country.cities_count} cities</div>
+                  <div className="text-sm text-gray-500">
+                    {country.attractions_count} attractions, {country.events_count} events
+                  </div>
+                </div>
+                
+                {getStatusBadge(country.cities_count, country.attractions_count)}
+                
+                {country.needs_cities && (
+                  <button
+                    className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:bg-gray-400"
+                    onClick={() => startAIPopulation(country.code)}
+                    disabled={isPopulating}
+                  >
+                    🔍 Find Cities
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
