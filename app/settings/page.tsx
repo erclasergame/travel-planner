@@ -511,7 +511,7 @@ const SettingsPage = () => {
               <p className="text-xs text-gray-500 mt-2 text-center">
                 Tutti i visitatori utilizzeranno questo modello
               </p>
-            </div>
+            </div> 
 
             {/* Info Costi */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
