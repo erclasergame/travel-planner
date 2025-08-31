@@ -255,7 +255,7 @@ const SettingsPage = () => {
           </Link>
           <h1 className="text-3xl font-bold text-gray-800 flex items-center">
             <Settings className="h-8 w-8 mr-3 text-blue-600" />
-            ⚙️ Admin Settings v.4
+            ⚙️ Admin Settings v.5
           </h1>
           <div className="flex space-x-2">
             <Link

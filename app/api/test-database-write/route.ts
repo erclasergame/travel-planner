@@ -88,61 +88,111 @@ export async function POST(request: NextRequest) {
       
       console.log('📋 Available columns:', columns);
       
-      // Create a filtered record with only valid columns
-      const filteredRecord: Record<string, any> = { id: testId };
+      // Analisi dettagliata della tabella
+      console.log('🔍 Analisi dettagliata della tabella:');
+      console.log('- Nome tabella: global-settings');
+      console.log('- Numero record trovati:', tableData.records?.length || 0);
+      console.log('- Colonne disponibili:', columns);
       
-      // Only include fields that exist in the table
-      if (columns.indexOf('ai_model') >= 0) filteredRecord.ai_model = 'test-model';
-      if (columns.indexOf('last_updated') >= 0) filteredRecord.last_updated = new Date().toISOString();
-      if (columns.indexOf('updated_by') >= 0) filteredRecord.updated_by = 'test-script';
+      if (tableData.records && tableData.records.length > 0) {
+        console.log('- Esempio record:', JSON.stringify(tableData.records[0], null, 2));
+        
+        // Estrai tutti i campi dal record di esempio
+        const sampleRecord = tableData.records[0];
+        console.log('- Campi nel record di esempio:');
+        Object.keys(sampleRecord).forEach(key => {
+          console.log(`  - ${key}: ${typeof sampleRecord[key]} = ${JSON.stringify(sampleRecord[key])}`);
+        });
+      }
       
-      console.log('📝 Filtered record to insert:', filteredRecord);
+      // SOLUZIONE ALTERNATIVA: Invece di creare un nuovo record, aggiorniamo quello esistente
+      console.log('🔄 Utilizzo approccio PATCH invece di POST per evitare problemi con xata_id');
       
-      // Try to insert the record
-      const insertResponse = await fetch(`${XATA_DB_URL}/tables/global-settings/data`, {
-        method: 'POST',
+      // Verifichiamo se esiste un record con ID "global-settings"
+      const getExistingResponse = await fetch(`${XATA_DB_URL}/tables/global-settings/data/global-settings`, {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${XATA_API_KEY}`,
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(filteredRecord)
+        }
       });
       
-      console.log('📡 Insert response status:', insertResponse.status);
-      
-      if (!insertResponse.ok) {
-        const errorText = await insertResponse.text();
-        console.error('❌ Insert failed:', errorText);
+      if (getExistingResponse.ok) {
+        console.log('✅ Record "global-settings" trovato, procedo con aggiornamento');
+        const existingRecord = await getExistingResponse.json();
+        console.log('📄 Record esistente:', existingRecord);
+        
+        // Aggiorniamo il record esistente invece di crearne uno nuovo
+        const updateRecord = {
+          ai_model: `test-model-${Date.now()}`,
+          last_updated: new Date().toISOString(),
+          updated_by: 'test-script'
+        };
+        
+        console.log('📝 Update record:', updateRecord);
+        
+        // Aggiorna il record esistente
+        const updateResponse = await fetch(`${XATA_DB_URL}/tables/global-settings/data/global-settings`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${XATA_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateRecord)
+        });
+        
+        console.log('📡 Update response status:', updateResponse.status);
+        
+        if (!updateResponse.ok) {
+          const errorText = await updateResponse.text();
+          console.error('❌ Update failed:', errorText);
+          
+          return NextResponse.json({
+            success: false,
+            error: `Xata update failed: ${updateResponse.status} - ${errorText}`,
+            record: updateRecord,
+            tableInfo: {
+              storage: 'Xata',
+              table: 'global-settings',
+              operation: 'PATCH',
+              columns: columns,
+              status: 'update-error',
+              details: errorText
+            }
+          }, { status: updateResponse.status });
+        }
+        
+        const updateResult = await updateResponse.json();
+        console.log('✅ Update successful:', updateResult);
         
         return NextResponse.json({
-          success: false,
-          error: `Xata insert failed: ${insertResponse.status} - ${errorText}`,
-          record: filteredRecord,
+          success: true,
+          message: 'Test di aggiornamento completato con successo!',
+          record: updateRecord,
+          result: updateResult,
           tableInfo: {
             storage: 'Xata',
             table: 'global-settings',
+            operation: 'PATCH',
             columns: columns,
-            status: 'insert-error',
-            details: errorText
+            status: 'success'
           }
-        }, { status: insertResponse.status });
+        });
+      } else {
+        // Se il record non esiste, restituisci un errore
+        console.error('❌ Record "global-settings" non trovato');
+        
+        return NextResponse.json({
+          success: false,
+          error: 'Record "global-settings" non trovato',
+          tableInfo: {
+            storage: 'Xata',
+            table: 'global-settings',
+            status: 'record-not-found',
+            details: 'Il record con ID "global-settings" non esiste'
+          }
+        }, { status: 404 });
       }
-      
-      const insertResult = await insertResponse.json();
-      console.log('✅ Insert successful:', insertResult);
-      
-      return NextResponse.json({
-        success: true,
-        message: 'Test di scrittura completato con successo!',
-        record: filteredRecord,
-        result: insertResult,
-        tableInfo: {
-          storage: 'Xata',
-          table: 'global-settings',
-          columns: columns,
-          status: 'success'
-        }
-      });
       
     } catch (xataError: any) {
       console.error('❌ Xata operation error:', xataError);
