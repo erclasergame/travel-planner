@@ -39,6 +39,70 @@ async function xataCall(table: string, method: string, data: any = null) {
   return await response.json();
 }
 
+// Crea automaticamente la tabella global_settings se non esiste
+async function ensureGlobalSettingsTable() {
+  try {
+    console.log('🔧 Checking if global_settings table exists...');
+    
+    // Prova a creare la tabella
+    const createTableResponse = await fetch(`${XATA_DB_URL}/tables`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${XATA_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'global_settings',
+        columns: [
+          {
+            name: 'id',
+            type: 'text',
+            notNull: true
+          },
+          {
+            name: 'ai_model',
+            type: 'text',
+            notNull: true
+          },
+          {
+            name: 'last_updated',
+            type: 'timestamptz',
+            notNull: true
+          },
+          {
+            name: 'updated_by',
+            type: 'text',
+            notNull: true
+          }
+        ]
+      })
+    });
+
+    if (createTableResponse.ok) {
+      console.log('✅ global_settings table created successfully');
+      
+      // Inserisci le impostazioni di default
+      const defaultSettings = {
+        id: 'global-settings',
+        ai_model: process.env.AI_MODEL || 'google/gemma-2-9b-it:free',
+        last_updated: new Date().toISOString(),
+        updated_by: 'system'
+      };
+      
+      console.log('💾 Inserting default settings...');
+      await xataCall('global_settings', 'POST', defaultSettings);
+      console.log('✅ Default settings inserted');
+      
+    } else {
+      const error = await createTableResponse.text();
+      console.log('ℹ️ Table might already exist or error:', error);
+    }
+    
+  } catch (error) {
+    console.log('ℹ️ Table creation error (might already exist):', error);
+  }
+}
+
 // Leggi settings globali
 export async function GET() {
   try {
@@ -47,6 +111,9 @@ export async function GET() {
     if (!XATA_API_KEY) {
       throw new Error('Database not configured');
     }
+    
+    // Assicurati che la tabella esista
+    await ensureGlobalSettingsTable();
     
     // Prova a leggere le impostazioni esistenti
     const result = await xataCall('global_settings', 'GET');
@@ -108,6 +175,9 @@ export async function POST(request: NextRequest) {
     if (!XATA_API_KEY) {
       throw new Error('Database not configured');
     }
+    
+    // Assicurati che la tabella esista
+    await ensureGlobalSettingsTable();
     
     const settings = {
       id: 'global-settings', // ID fisso per le impostazioni globali
