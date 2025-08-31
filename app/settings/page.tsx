@@ -251,6 +251,68 @@ const SettingsPage = () => {
           </div>
         </div>
 
+        {/* 🔧 NUOVO: Status del database - POSIZIONE VISIBILE */}
+        {dbStatus === 'checking' && (
+          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-blue-800">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Verificando connessione database...</span>
+            </div>
+          </div>
+        )}
+
+        {dbStatus === 'connected' && (
+          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-green-800">
+              <CheckCircle className="h-4 w-4" />
+              <span>✅ Database connesso e tabella global_settings presente</span>
+            </div>
+          </div>
+        )}
+
+        {dbStatus === 'table-missing' && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-red-800">
+              <AlertCircle className="h-4 w-4" />
+              <div>
+                <strong>❌ Tabella global_settings mancante!</strong>
+                <p className="text-sm mt-1">
+                  La tabella global_settings non esiste nel database. 
+                  Devi crearla manualmente in Xata con le colonne: id, ai_model, last_updated, updated_by
+                </p>
+                <button 
+                  onClick={checkDatabaseStatus}
+                  className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors text-sm"
+                >
+                  <RefreshCw className="h-3 w-3 inline mr-1" />
+                  Ricontrolla
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {dbStatus === 'error' && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-red-800">
+              <AlertCircle className="h-4 w-4" />
+              <div>
+                <strong>❌ Errore di connessione database!</strong>
+                <p className="text-sm mt-1">
+                  Impossibile connettersi al database Xata. Verifica le credenziali e la connessione.
+                </p>
+                <button 
+                  onClick={checkDatabaseStatus}
+                  className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors text-sm"
+                >
+                  <RefreshCw className="h-3 w-3 inline mr-1" />
+                  Riprova
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ✅ NUOVO: Info sistema globale */}
         <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 mb-8">
           <div className="flex items-center gap-3 mb-3">
