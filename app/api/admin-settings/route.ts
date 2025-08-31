@@ -49,7 +49,7 @@ export async function GET() {
     }
     
     // Prova a leggere le impostazioni esistenti
-    const result = await xataCall('global_settings', 'GET');
+    const result = await xataCall('global-settings', 'GET');
     
     if (result.records && result.records.length > 0) {
       const settings = result.records[0];
@@ -123,13 +123,13 @@ export async function POST(request: NextRequest) {
     
     // Prova prima a leggere per vedere se esiste
     console.log('🔍 Checking if record exists...');
-    const existing = await xataCall('global_settings', 'GET');
+    const existing = await xataCall('global-settings', 'GET');
     console.log('📖 Existing records:', existing);
     
     if (existing.records && existing.records.length > 0) {
       // Aggiorna record esistente
       console.log('🔄 Updating existing record...');
-      const updateResponse = await fetch(`${XATA_DB_URL}/tables/global_settings/data/global-settings`, {
+      const updateResponse = await fetch(`${XATA_DB_URL}/tables/global-settings/data/global-settings`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${XATA_API_KEY}`,
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Crea nuovo record
       console.log('🆕 Creating new record...');
-      const createResponse = await fetch(`${XATA_DB_URL}/tables/global_settings/data`, {
+      const createResponse = await fetch(`${XATA_DB_URL}/tables/global-settings/data`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${XATA_API_KEY}`,

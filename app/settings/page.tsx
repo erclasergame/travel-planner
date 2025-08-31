@@ -297,7 +297,7 @@ const SettingsPage = () => {
           <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center gap-2 text-green-800">
               <CheckCircle className="h-4 w-4" />
-              <span>✅ Database connesso e tabella global_settings presente</span>
+              <span>✅ Database connesso e tabella global-settings presente</span>
             </div>
           </div>
         )}
@@ -307,9 +307,9 @@ const SettingsPage = () => {
             <div className="flex items-center gap-2 text-red-800">
               <AlertCircle className="h-4 w-4" />
               <div>
-                <strong>❌ Tabella global_settings mancante!</strong>
+                <strong>❌ Tabella global-settings mancante!</strong>
                 <p className="text-sm mt-1">
-                  La tabella global_settings non esiste nel database. 
+                  La tabella global-settings non esiste nel database. 
                   Devi crearla manualmente in Xata con le colonne: id, ai_model, last_updated, updated_by
                 </p>
                 <button 

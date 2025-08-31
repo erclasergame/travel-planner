@@ -17,9 +17,9 @@ if (!XATA_API_KEY) {
 
 async function createGlobalSettingsTable() {
   try {
-    console.log('🔧 Creating global_settings table...');
+    console.log('🔧 Creating global-settings table...');
     
-    // Crea la tabella global_settings
+    // Crea la tabella global-settings
     const createTableResponse = await fetch(`${XATA_DB_URL}/tables`, {
       method: 'POST',
       headers: {
@@ -27,7 +27,7 @@ async function createGlobalSettingsTable() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name: 'global_settings',
+        name: 'global-settings',
         columns: [
           {
             name: 'ai_model',
@@ -52,13 +52,13 @@ async function createGlobalSettingsTable() {
       const error = await createTableResponse.text();
       console.log('ℹ️ Table might already exist or error:', error);
     } else {
-      console.log('✅ global_settings table created successfully');
+      console.log('✅ global-settings table created successfully');
     }
 
     // Inserisci le impostazioni di default
     console.log('💾 Inserting default settings...');
     
-    const insertResponse = await fetch(`${XATA_DB_URL}/tables/global_settings/data`, {
+    const insertResponse = await fetch(`${XATA_DB_URL}/tables/global-settings/data`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${XATA_API_KEY}`,

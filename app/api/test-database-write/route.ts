@@ -26,8 +26,8 @@ export async function POST(request: NextRequest) {
     
     console.log('📝 Test record to insert:', testRecord);
     
-    // Prova a inserire direttamente nella tabella global_settings
-    const response = await fetch(`${XATA_DB_URL}/tables/global_settings/data`, {
+    // Prova a inserire direttamente nella tabella global-settings
+    const response = await fetch(`${XATA_DB_URL}/tables/global-settings/data`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${XATA_API_KEY}`,
