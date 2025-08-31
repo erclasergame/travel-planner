@@ -15,13 +15,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { message } = body;
     
-    // Crea un record di test unico - SOLO campi esistenti nella tabella
+    // Crea un record di test ULTRA-SEMPLIFICATO - solo ai_model
     const testRecord = {
-      id: `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      ai_model: 'test-model',
-      last_updated: new Date().toISOString(),
-      updated_by: 'test-script'
-      // Rimosso test_message perché non esiste nella tabella
+      // Usiamo un ID univoco ma semplice
+      id: `test-${Date.now()}`,
+      // Solo il campo ai_model come richiesto
+      ai_model: 'test-model'
     };
     
     console.log('📝 Test record to insert:', testRecord);
