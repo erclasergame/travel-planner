@@ -1,21 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Redis } from '@upstash/redis';
 
-const redis = Redis.fromEnv();
-const SETTINGS_KEY = 'travel-planner-global-settings';
+// Configurazione Xata
+const XATA_API_KEY = process.env.XATA_API_KEY;
+const XATA_DB_URL = process.env.XATA_DATABASE_URL || 'https://testdaniele77-1-s-workspace-j00f29.eu-central-1.xata.sh/db/travel_planner:main';
+
+if (!XATA_API_KEY) {
+  console.error('❌ XATA_API_KEY not configured');
+}
+
+// Helper per chiamare API Xata
+async function xataCall(table: string, method: string, data: any = null) {
+  const url = `${XATA_DB_URL}/tables/${table}/${method === 'POST' ? 'data' : 'query'}`;
+  
+  const options: any = {
+    method: method === 'GET' ? 'POST' : method,
+    headers: {
+      'Authorization': `Bearer ${XATA_API_KEY}`,
+      'Content-Type': 'application/json',
+    }
+  };
+  
+  if (method === 'GET') {
+    // Per le query GET, usiamo POST con filtro per ID specifico
+    options.body = JSON.stringify({
+      filter: { id: 'global-settings' }
+    });
+  } else if (data) {
+    options.body = JSON.stringify(data);
+  }
+  
+  const response = await fetch(url, options);
+  
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Xata API error (${response.status}): ${error}`);
+  }
+  
+  return await response.json();
+}
 
 // Leggi settings globali
 export async function GET() {
   try {
-    console.log('📖 Reading global settings from Redis...');
+    console.log('📖 Reading global settings from Xata...');
     
-    const settings = await redis.get(SETTINGS_KEY);
+    if (!XATA_API_KEY) {
+      throw new Error('Database not configured');
+    }
     
-    if (settings) {
+    // Prova a leggere le impostazioni esistenti
+    const result = await xataCall('global_settings', 'GET');
+    
+    if (result.records && result.records.length > 0) {
+      const settings = result.records[0];
       console.log('✅ Settings found:', settings);
       return NextResponse.json({
         success: true,
-        settings
+        settings: {
+          aiModel: settings.ai_model,
+          lastUpdated: settings.last_updated,
+          updatedBy: settings.updated_by
+        }
       });
     } else {
       // Se non esistono settings, usa default
@@ -36,10 +81,17 @@ export async function GET() {
   } catch (error) {
     console.error('❌ Error reading settings:', error);
     
+    // Fallback a impostazioni di default in caso di errore
+    const defaultSettings = {
+      aiModel: process.env.AI_MODEL || 'google/gemma-2-9b-it:free',
+      lastUpdated: new Date().toISOString(),
+      updatedBy: 'system'
+    };
+    
     return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Errore sconosciuto'
-    }, { status: 500 });
+      success: true,
+      settings: defaultSettings
+    });
   }
 }
 
@@ -53,22 +105,40 @@ export async function POST(request: NextRequest) {
       throw new Error('aiModel is required');
     }
     
+    if (!XATA_API_KEY) {
+      throw new Error('Database not configured');
+    }
+    
     const settings = {
-      aiModel,
-      lastUpdated: new Date().toISOString(),
-      updatedBy
+      id: 'global-settings', // ID fisso per le impostazioni globali
+      ai_model: aiModel,
+      last_updated: new Date().toISOString(),
+      updated_by: updatedBy
     };
     
-    console.log('💾 Saving global settings to Redis:', settings);
+    console.log('💾 Saving global settings to Xata:', settings);
     
-    await redis.set(SETTINGS_KEY, settings);
+    // Prova prima a leggere per vedere se esiste
+    const existing = await xataCall('global_settings', 'GET');
+    
+    if (existing.records && existing.records.length > 0) {
+      // Aggiorna record esistente
+      await xataCall('global_settings', 'PATCH', settings);
+    } else {
+      // Crea nuovo record
+      await xataCall('global_settings', 'POST', settings);
+    }
     
     console.log('✅ Settings saved successfully');
     
     return NextResponse.json({
       success: true,
       message: 'Settings saved globally',
-      settings
+      settings: {
+        aiModel: settings.ai_model,
+        lastUpdated: settings.last_updated,
+        updatedBy: settings.updated_by
+      }
     });
     
   } catch (error) {
