@@ -119,14 +119,50 @@ export async function POST(request: NextRequest) {
     console.log('💾 Saving global settings to Xata:', settings);
     
     // Prova prima a leggere per vedere se esiste
+    console.log('🔍 Checking if record exists...');
     const existing = await xataCall('global_settings', 'GET');
+    console.log('📖 Existing records:', existing);
     
     if (existing.records && existing.records.length > 0) {
       // Aggiorna record esistente
-      await xataCall('global_settings', 'PATCH', settings);
+      console.log('🔄 Updating existing record...');
+      const updateResponse = await fetch(`${XATA_DB_URL}/tables/global_settings/data/global-settings`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ai_model: aiModel,
+          last_updated: new Date().toISOString(),
+          updated_by: updatedBy
+        })
+      });
+      
+      if (!updateResponse.ok) {
+        const error = await updateResponse.text();
+        throw new Error(`Update failed (${updateResponse.status}): ${error}`);
+      }
+      
+      console.log('✅ Record updated successfully');
     } else {
       // Crea nuovo record
-      await xataCall('global_settings', 'POST', settings);
+      console.log('🆕 Creating new record...');
+      const createResponse = await fetch(`${XATA_DB_URL}/tables/global_settings/data`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${XATA_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings)
+      });
+      
+      if (!createResponse.ok) {
+        const error = await createResponse.text();
+        throw new Error(`Create failed (${createResponse.status}): ${error}`);
+      }
+      
+      console.log('✅ Record created successfully');
     }
     
     console.log('✅ Settings saved successfully');
