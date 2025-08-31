@@ -18,6 +18,7 @@ const SettingsPage = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [globalSettings, setGlobalSettings] = useState<any>(null);
   const [dbStatus, setDbStatus] = useState<'connected' | 'checking' | 'table-missing' | 'error'>('connected');
+  const [dbTestResult, setDbTestResult] = useState<string | null>(null);
 
   // Carica modelli AI all'avvio
   useEffect(() => {
@@ -191,6 +192,29 @@ const SettingsPage = () => {
     }
   };
 
+  const testDatabaseWrite = async () => {
+    setDbTestResult('Provo a scrivere...');
+    try {
+      const response = await fetch('/api/test-database-write', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: 'Test di scrittura del database'
+        })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setDbTestResult('✅ Scrittura riuscito!');
+      } else {
+        setDbTestResult('❌ Scrittura fallito: ' + (data.error || 'Errore sconosciuto'));
+      }
+    } catch (error) {
+      setDbTestResult('❌ Scrittura fallito: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  };
+
   const getCategoryColor = (category: CategoryType) => {
     switch (category) {
       case 'free': return 'bg-green-100 text-green-800';
@@ -307,6 +331,26 @@ const SettingsPage = () => {
                 >
                   <RefreshCw className="h-3 w-3 inline mr-1" />
                   Riprova
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 🧪 NUOVO: Risultato test database */}
+        {dbTestResult && (
+          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-yellow-800">
+              <AlertCircle className="h-4 w-4" />
+              <div>
+                <strong>🧪 Test Database Diretto:</strong>
+                <p className="text-sm mt-1 font-mono">{dbTestResult}</p>
+                <button 
+                  onClick={testDatabaseWrite}
+                  className="mt-2 px-3 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors text-sm"
+                >
+                  <RefreshCw className="h-3 w-3 inline mr-1" />
+                  Riprova Test
                 </button>
               </div>
             </div>
