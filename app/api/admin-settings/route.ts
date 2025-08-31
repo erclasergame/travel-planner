@@ -98,6 +98,9 @@ export async function GET() {
 // Salva settings globali
 export async function POST(request: NextRequest) {
   try {
+    console.log('🚀🚀🚀 NUOVA VERSIONE API - POST admin-settings 🚀🚀🚀');
+    console.log('🔧 Using direct Xata API calls instead of xataCall helper');
+    
     const body = await request.json();
     const { aiModel, updatedBy = 'admin' } = body;
     
