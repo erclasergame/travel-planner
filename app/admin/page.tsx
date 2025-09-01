@@ -44,6 +44,14 @@ export default function AdminDashboard() {
       status: stats?.database === 'online' ? 'Connesso' : 'Offline'
     },
     {
+      title: 'DB Diagnostics',
+      description: 'Diagnostica completa del database',
+      icon: <Server className="h-8 w-8" />,
+      href: '/admin/db-diagnostics',
+      color: 'bg-cyan-500',
+      status: 'Nuovo'
+    },
+    {
       title: 'Bulk Upload',
       description: 'Carica dati JSON in massa nel database',
       icon: <Upload className="h-8 w-8" />,
@@ -52,13 +60,13 @@ export default function AdminDashboard() {
       status: 'Attivo'
     },
     {
-  title: 'Bulk Insert Database',
-  description: 'Popola cities, attractions, events in massa',
-  icon: <Database className="h-8 w-8" />,
-  href: '/admin/bulk-insert',
-  color: 'bg-indigo-500',
-  status: 'Attivo'
-},
+      title: 'Bulk Insert Database',
+      description: 'Popola cities, attractions, events in massa',
+      icon: <Database className="h-8 w-8" />,
+      href: '/admin/bulk-insert',
+      color: 'bg-indigo-500',
+      status: 'Attivo'
+    },
     {
       title: 'Configurazione AI',
       description: 'Gestisci modelli AI globali del sistema',
