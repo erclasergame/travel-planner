@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ DB Diagnostics API error:', error);
     
-    return NextResponse.json({
+    return Response.json({
       success: false,
       error: `Errore API: ${error.message || 'Errore sconosciuto'}`
     }, { status: 500 });
@@ -125,7 +125,7 @@ async function getDatabaseInfo() {
       environment: process.env.NODE_ENV || 'unknown'
     };
     
-    return NextResponse.json({
+    return Response.json({
       success: true,
       dbInfo,
       tables,
@@ -135,7 +135,7 @@ async function getDatabaseInfo() {
   } catch (error: any) {
     console.error('❌ Error getting database info:', error);
     
-    return NextResponse.json({
+    return Response.json({
       success: false,
       error: `Errore ottenimento info database: ${error.message || 'Errore sconosciuto'}`
     }, { status: 500 });
@@ -256,7 +256,7 @@ async function getTableData(tableName: string) {
       totalRecords = countData.summaries?.[0]?.count || 0;
     }
     
-    return NextResponse.json({
+    return Response.json({
       success: true,
       tableName,
       schema: schemaData,
@@ -267,7 +267,7 @@ async function getTableData(tableName: string) {
   } catch (error: any) {
     console.error(`❌ Error getting data for table "${tableName}":`, error);
     
-    return NextResponse.json({
+    return Response.json({
       success: false,
       error: `Errore ottenimento dati tabella "${tableName}": ${error.message || 'Errore sconosciuto'}`
     }, { status: 500 });
