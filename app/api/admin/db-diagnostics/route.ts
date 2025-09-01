@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 
 // Configurazione Xata
 const XATA_API_KEY = process.env.XATA_API_KEY;
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       console.warn('⚠️ XATA_API_KEY non configurata, usando modalità simulata');
       
       // Restituisci dati simulati invece di fallire
-      return NextResponse.json({
+      return Response.json({
         success: true,
         dbInfo: {
           dbUrl: XATA_DB_URL || 'URL non disponibile',
@@ -182,7 +182,7 @@ async function getTableData(tableName: string) {
         records: [{ id: 'example', name: 'Example Record', type: 'simulated' }] 
       };
       
-      return NextResponse.json({
+      return Response.json({
         success: true,
         tableName,
         schema: {
