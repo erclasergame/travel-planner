@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       // Se è specificata una tabella, restituisci dati simulati per quella tabella
       if (tableName) {
         // Dati simulati per tabelle specifiche
-        const simulatedData = {
+        const simulatedData: Record<string, any[]> = {
           'global-settings': [{
             id: 'global-settings',
             ai_model: 'google/gemma-2-9b-it:free',
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         };
         
         // Restituisci dati simulati per la tabella richiesta o un set generico
-        const records = simulatedData[tableName] || [{ id: 'example', name: 'Example Record', type: 'simulated' }];
+        const records = tableName && simulatedData[tableName] ? simulatedData[tableName] : [{ id: 'example', name: 'Example Record', type: 'simulated' }];
         
         return Response.json({
           records: records,
