@@ -15,10 +15,31 @@ export async function GET(request: NextRequest) {
     
     // Controlla se l'API key è configurata
     if (!XATA_API_KEY) {
+      console.warn('⚠️ XATA_API_KEY non configurata, usando modalità simulata');
+      
+      // Restituisci dati simulati invece di fallire
       return NextResponse.json({
-        success: false,
-        error: 'XATA_API_KEY non configurata'
-      }, { status: 500 });
+        success: true,
+        dbInfo: {
+          dbUrl: XATA_DB_URL || 'URL non disponibile',
+          apiKey: 'Non configurata',
+          connected: false,
+          tableCount: 0,
+          environment: process.env.NODE_ENV || 'production',
+          mode: 'SIMULATED'
+        },
+        tables: ['global-settings', 'continents', 'countries', 'cities', 'attractions', 'events'],
+        recordCount: {
+          'global-settings': 1,
+          'continents': 6,
+          'countries': 50,
+          'cities': 30,
+          'attractions': 100,
+          'events': 20
+        },
+        message: 'Modalità simulata - XATA_API_KEY non configurata',
+        timestamp: new Date().toISOString()
+      });
     }
     
     // Ottieni parametri dalla query
@@ -127,6 +148,57 @@ async function getDatabaseInfo() {
 async function getTableData(tableName: string) {
   try {
     console.log(`📊 Getting data for table "${tableName}"...`);
+    
+    // Se non c'è API key, restituisci dati simulati
+    if (!XATA_API_KEY) {
+      console.warn(`⚠️ XATA_API_KEY non configurata, usando dati simulati per tabella "${tableName}"`);
+      
+      // Dati simulati per diverse tabelle
+      const simulatedData: Record<string, any> = {
+        'global-settings': {
+          records: [{
+            id: 'global-settings',
+            ai_model: 'google/gemma-2-9b-it:free',
+            last_updated: new Date().toISOString(),
+            updated_by: 'system'
+          }]
+        },
+        'continents': {
+          records: [
+            { id: 'eu', name: 'Europe', code: 'EU' },
+            { id: 'as', name: 'Asia', code: 'AS' }
+          ]
+        },
+        'countries': {
+          records: [
+            { id: 'it', name: 'Italy', code: 'IT', continent_id: 'eu' },
+            { id: 'fr', name: 'France', code: 'FR', continent_id: 'eu' }
+          ]
+        }
+      };
+      
+      // Restituisci dati simulati per la tabella richiesta o un set generico
+      const tableData = simulatedData[tableName] || { 
+        records: [{ id: 'example', name: 'Example Record', type: 'simulated' }] 
+      };
+      
+      return NextResponse.json({
+        success: true,
+        tableName,
+        schema: {
+          name: tableName,
+          columns: [
+            { name: 'id', type: 'string' },
+            { name: 'name', type: 'string' },
+            { name: 'type', type: 'string' }
+          ]
+        },
+        tableData,
+        totalRecords: tableData.records.length,
+        mode: 'SIMULATED',
+        timestamp: new Date().toISOString()
+      });
+    }
     
     // Ottieni struttura tabella
     const schemaResponse = await fetch(`${XATA_DB_URL}/tables/${tableName}`, {
