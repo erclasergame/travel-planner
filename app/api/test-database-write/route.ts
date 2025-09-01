@@ -179,19 +179,63 @@ export async function POST(request: NextRequest) {
           }
         });
       } else {
-        // Se il record non esiste, restituisci un errore
-        console.error('❌ Record "global-settings" non trovato');
+        // Se il record non esiste, lo creiamo (come fa admin-settings)
+        console.log('🆕 Record "global-settings" non trovato, lo creo...');
+        
+        // Crea il record global-settings
+        const createRecord = {
+          id: 'global-settings',
+          ai_model: `test-model-${Date.now()}`,
+          last_updated: new Date().toISOString(),
+          updated_by: 'test-script'
+        };
+        
+        console.log('📝 Create record:', createRecord);
+        
+        const createResponse = await fetch(`${XATA_DB_URL}/tables/global-settings/data`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${XATA_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(createRecord)
+        });
+        
+        console.log('📡 Create response status:', createResponse.status);
+        
+        if (!createResponse.ok) {
+          const errorText = await createResponse.text();
+          console.error('❌ Create failed:', errorText);
+          
+          return NextResponse.json({
+            success: false,
+            error: `Xata create failed: ${createResponse.status} - ${errorText}`,
+            record: createRecord,
+            tableInfo: {
+              storage: 'Xata',
+              table: 'global-settings',
+              operation: 'POST',
+              status: 'create-error',
+              details: errorText
+            }
+          }, { status: createResponse.status });
+        }
+        
+        const createResult = await createResponse.json();
+        console.log('✅ Record created successfully:', createResult);
         
         return NextResponse.json({
-          success: false,
-          error: 'Record "global-settings" non trovato',
+          success: true,
+          message: 'Test di creazione completato con successo!',
+          record: createRecord,
+          result: createResult,
           tableInfo: {
             storage: 'Xata',
             table: 'global-settings',
-            status: 'record-not-found',
-            details: 'Il record con ID "global-settings" non esiste'
+            operation: 'POST',
+            status: 'success'
           }
-        }, { status: 404 });
+        });
       }
       
     } catch (xataError: any) {
